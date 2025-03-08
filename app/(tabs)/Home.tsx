@@ -44,7 +44,7 @@ export default function HoraLocalScreen() {
         />
       
 
-      <ThemedText style={style.subtitle}>Bienvenido gris!</ThemedText>
+      <ThemedText style={style.subtitle}>Bienvenido Marco!</ThemedText>
 
 
       <ThemedText style={style.timeText}>{hora}</ThemedText>
