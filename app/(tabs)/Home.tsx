@@ -1,8 +1,6 @@
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 export default function HoraLocalScreen() {
     const [hora, setHora] = useState('');
@@ -22,16 +20,26 @@ export default function HoraLocalScreen() {
     }, []);
 
   return (
-    <ThemedView style={style.container}>
-
-
-      
-
-      <ThemedText style={style.subtitle}>Bienvenido Marcooo!</ThemedText>
-
-
-      <ThemedText style={style.timeText}>{hora}</ThemedText>
-    </ThemedView>
+    <View style={style.container}>
+      <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.subtitle}>¡Bienvenido Marco!</Text>
+      <Image
+        source={require('@/assets/images/Logo_GarzaStyle.png')}
+        style={style.GarzaLogo}
+      />
+        <Image
+        source={require('@/assets/images/corazon.png')}
+        style={style.corazon}
+      />
+        <Image
+        source={require('@/assets/images/compartir.png')}
+        style={style.compartir}
+      />
+        <Image
+        source={require('@/assets/images/enviar.png')}
+        style={style.enviar}
+      />
+    </View>
   );
 }
 
@@ -46,13 +54,13 @@ const style = StyleSheet.create({
     subtitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: 'Green',
+        color: '#669339',
         marginBottom: 10,
         position: 'absolute',
         top: 120,
         left: 30,
     },
-    reactLogo: {
+    GarzaLogo: {
         height: 150,
         width: '60%',
         bottom: 530,
@@ -85,7 +93,7 @@ const style = StyleSheet.create({
         position: 'absolute',
         resizeMode: 'contain',
       },
-    timeText: {
+    horaTexto: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#669339', 
