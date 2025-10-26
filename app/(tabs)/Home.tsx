@@ -1,31 +1,16 @@
 
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, } from 'expo-router';
+import { useState } from 'react';
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useHora } from '../Hora';
 
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function HoraLocalScreen() {
-  const [hora, setHora] = useState('');
+  const hora = useHora(); 
   const [menuVisible, setMenuVisible] = useState(false);
-
-
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newHora = new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-
-      setHora(newHora);  // Actualiza la hora
-    }, 1000);  // Actualiza cada segundo
-
-    return () => clearInterval(interval);  // Limpia el intervalo cuando se desmonta
-  }, []);
-
+  
   const toggleMenu = () => {
     setMenuVisible(!menuVisible);
   };
@@ -37,10 +22,11 @@ export default function HoraLocalScreen() {
     <View style={style.container}>
       {/* Menú deslizable */}
 <View style={style.menu}>
-
-  <Image source={require('@/assets/images/Gancho.png')} style={style.menuImage} />
-  <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
   <TouchableOpacity onPress={()=> router.push('/Armario')}>
+  <Image source={require('@/assets/images/Gancho.png')} style={style.menuImage} />
+  </TouchableOpacity>
+  <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
+  <TouchableOpacity onPress={()=> console.log('Funciona')}>
   <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
   </TouchableOpacity>
   <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
@@ -128,14 +114,16 @@ menuImageRedes: {
 },
 
   //Para la hora
-  horaTexto: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#669339',
-    position: 'absolute',
-    top: 40,
-    left: 260,
-  },
+horaTexto: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#669339',
+  position: 'absolute',
+  top: 40,
+  right: 20, // usa 'right' en lugar de 'left' si quieres que se alinee a la derecha
+},
+
+
 
 
   //Para el menu 

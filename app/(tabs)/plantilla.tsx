@@ -1,7 +1,7 @@
 
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Animated, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHora } from '../Hora';
 
 
@@ -11,9 +11,9 @@ const screenWidth = Dimensions.get('window').width;
 export default function HoraLocalScreen() {
     const hora = useHora();
     const [menuVisible, setMenuVisible] = useState(false);
-    const [modalVisible, setModalVisible] = useState(false); // Modal para "+" 
     const translateX = useRef(new Animated.Value(screenWidth)).current;
 
+ 
 
     const toggleMenu = () => {
         if (menuVisible) {
@@ -66,7 +66,11 @@ export default function HoraLocalScreen() {
                                 style={style.menuImage}
                             /></TouchableOpacity>
                         
-
+                        <TouchableOpacity onPress={() => console.log('aun no')}>
+                            <Image
+                                source={require('@/assets/images/Gancho.png')}
+                                style={style.menuImage}
+                            /></TouchableOpacity>
 
                         <TouchableOpacity onPress={() => console.log('aun no')}>
                             <Image
@@ -104,41 +108,6 @@ export default function HoraLocalScreen() {
                 source={require('@/assets/images/Logo_GarzaStyle.png')}
                 style={style.GarzaLogo}
             />
-{/* Secciones horizontales estáticas */}
-<View style={style.sectionsContainer}>
-  {['Accesorios', 'Camisas / Playeras', 'Pantalones / Shorts / Faldas', 'Tenis / Zapatos'].map((title, idx) => (
-    <View key={idx} style={style.section}>
-      <Text style={style.sectionTitle}>{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {/* Primer item con "+" */}
-        <TouchableOpacity style={style.placeholderItem} onPress={() => setModalVisible(true)}>
-          <Text style={{ fontSize: 24, fontWeight: 'bold' }}>+</Text>
-        </TouchableOpacity>
-        {/* Items de ejemplo */}
-        {[2, 3].map((i) => (
-          <View key={i} style={style.placeholderItem}>
-            <Text>Item {i}</Text>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
-  ))}
-</View>
-
-
-            {/* Modal flotante para "+" */}
-            <Modal transparent visible={modalVisible} animationType="fade">
-                <Pressable style={style.modalOverlay} onPress={() => setModalVisible(false)}>
-                    <View style={style.modalContent}>
-                        <TouchableOpacity style={style.modalButton}>
-                            <Text>Galería</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[style.modalButton, { opacity: 0.5 }]}>
-                            <Text>Cámara</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Pressable>
-            </Modal>
         </View>
     );
 }
@@ -189,6 +158,7 @@ const style = StyleSheet.create({
         left: 260,
     },
 
+
     //Para el menu 
     menuButton: {
         position: 'absolute',
@@ -208,7 +178,7 @@ const style = StyleSheet.create({
         top: 160,
         right: 10,
         width: '30%',
-        height: '50%',
+        height: '65%',
         backgroundColor: '#eee',
         padding: 20,
         zIndex: 101,
@@ -231,50 +201,6 @@ const style = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0)',
         zIndex: 100,
     },
-    //apartados de enmedio
-    sectionsContainer: {
-        width: '100%',
-        paddingHorizontal: 10,
-        marginTop: 100, // ajusta este valor hasta que quede debajo de "LOCAL"
-    },
-     section: {
-        marginBottom: 15,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        marginLeft: 5,
-    },
-    placeholderItem: {
-        width: 80,
-        height: 80,
-        backgroundColor: '#eee',
-        marginRight: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 10,
-    },
-    // apartados modal
-      modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  modalContent: {
-    width: 200,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalButton: {
-    width: '100%',
-    padding: 10,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
+
 
 });
