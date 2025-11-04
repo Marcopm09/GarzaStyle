@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dimensions,
   Image,
@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { useHora } from '../Hora';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../FirebaseConfig'; // Asegúrate de tener configurado Firebase
 
 // Obtenemos dimensiones de pantalla
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -16,10 +18,31 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function HoraLocalScreen() {
   const hora = useHora();
   const [menuVisible, setMenuVisible] = useState(false);
+  const [nombreUsuario, setNombreUsuario] = useState('Usuario');
 
   const toggleMenu = () => {
     setMenuVisible(!menuVisible);
   };
+
+  // 🔹 Cargar nombre desde Firestore
+  useEffect(() => {
+    const cargarUsuario = async () => {
+      try {
+        const usuarioID = 'usuario1'; // cámbialo o hazlo dinámico si usas auth
+        const docRef = doc(db, 'Usuarios', usuarioID);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setNombreUsuario(docSnap.data().nombre);
+        } else {
+          console.log('No se encontró el usuario');
+        }
+      } catch (error) {
+        console.error('Error cargando usuario:', error);
+      }
+    };
+
+    cargarUsuario();
+  }, []);
 
   return (
     <View style={style.container}>
@@ -58,8 +81,8 @@ export default function HoraLocalScreen() {
       {/* Hora actual */}
       <Text style={style.horaTexto}>{hora}</Text>
 
-      {/* Bienvenida */}
-      <Text style={style.subtitle}>¡Bienvenido Gabriel!</Text>
+      {/* Bienvenida dinámica */}
+      <Text style={style.subtitle}>¡Bienvenido {nombreUsuario}!</Text>
 
       {/* Logo */}
       <Image
@@ -69,21 +92,21 @@ export default function HoraLocalScreen() {
 
       {/* Redes */}
       <View style={style.menuRedes}>
-        <TouchableOpacity onPress={() => console.log('hola')}>
+        <TouchableOpacity onPress={() => console.log('Compartir')}>
           <Image
             source={require('@/assets/images/compartir.png')}
             style={style.menuImageRedes}
           />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => console.log('hola')}>
+        <TouchableOpacity onPress={() => console.log('Corazón')}>
           <Image
             source={require('@/assets/images/corazon.png')}
             style={style.menuImageRedes}
           />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => console.log('holi')}>
+        <TouchableOpacity onPress={() => console.log('Enviar')}>
           <Image
             source={require('@/assets/images/enviar.png')}
             style={style.menuImageRedes}
@@ -122,7 +145,7 @@ const style = StyleSheet.create({
   horaTexto: {
     fontSize: screenWidth * 0.045,
     fontWeight: 'bold',
-    color: '#ffffffff', 
+    color: '#ffffffff',
     position: 'absolute',
     top: screenHeight * 0.05,
     right: screenWidth * 0.05,
@@ -134,7 +157,7 @@ const style = StyleSheet.create({
     right: screenWidth * 0.03,
     width: screenWidth * 0.25,
     height: screenHeight * 0.5,
-    backgroundColor: '#e3e3e3ff', // Rosa muy claro de fondo
+    backgroundColor: '#e3e3e3ff',
     padding: screenWidth * 0.04,
     borderRadius: 15,
     shadowColor: '#000000ff',
@@ -172,3 +195,4 @@ const style = StyleSheet.create({
     resizeMode: 'contain',
   },
 });
+

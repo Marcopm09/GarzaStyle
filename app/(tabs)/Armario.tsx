@@ -1,20 +1,20 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useHora } from '../Hora';
 
-// ✅ Tamaño dinámico de pantalla
 const screenWidth = Dimensions.get('window').width;
 const screenHeight = Dimensions.get('window').height;
 
@@ -115,7 +115,6 @@ export default function HoraLocalScreen() {
           style={style.GarzaLogo}
         />
         <Text style={style.subtitle}>GLOBALES</Text>
-        
       </View>
 
       {/* Secciones horizontales */}
@@ -156,14 +155,12 @@ export default function HoraLocalScreen() {
   );
 }
 
-
 const style = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#000000ff', 
+    backgroundColor: '#000000ff',
   },
-
   headerContainer: {
     width: '100%',
     alignItems: 'center',
@@ -181,8 +178,6 @@ const style = StyleSheet.create({
     color: '#ffffffff',
     marginTop: screenHeight * 0.015,
   },
-  
-
   horaTexto: {
     fontSize: screenWidth * 0.045,
     fontWeight: 'bold',
@@ -191,7 +186,6 @@ const style = StyleSheet.create({
     top: screenHeight * 0.05,
     right: screenWidth * 0.1,
   },
-
   menuButton: {
     position: 'absolute',
     top: screenHeight * 0.05,
@@ -208,7 +202,6 @@ const style = StyleSheet.create({
     fontSize: screenWidth * 0.07,
     color: '#ffffffff',
   },
-
   menu: {
     position: 'absolute',
     top: screenHeight * 0.2,
@@ -234,7 +227,6 @@ const style = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0)',
     zIndex: 100,
   },
-
   sectionsContainer: {
     width: '100%',
     paddingHorizontal: screenWidth * 0.03,
@@ -259,7 +251,6 @@ const style = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 15,
   },
-
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -289,3 +280,4 @@ const style = StyleSheet.create({
     fontSize: 16,
   },
 });
+
