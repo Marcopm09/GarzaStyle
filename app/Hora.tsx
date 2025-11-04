@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-// 1. Crear el contexto
+// 1. Crear el contexto prueba gris
 const HoraContext = createContext('');
 
 // 2. Definir props del proveedor lolol
