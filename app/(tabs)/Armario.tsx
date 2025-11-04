@@ -65,7 +65,7 @@ useEffect(() => {
         }
     };
 
-    // Función para subir imagen y actualizar UI
+    // Función para subir imagen y actualizar UI Fenix
     const subirImagen = async (usuarioID: string, seccion: string) => {
         try {
             // Permisos de galería
