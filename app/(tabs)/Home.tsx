@@ -1,81 +1,74 @@
-
 import { router } from 'expo-router';
+import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
+import { db } from '../../firebaseConfig';
+import { useHora } from '../Hora';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function HoraLocalScreen() {
-  const [hora, setHora] = useState('');
+  const hora = useHora(); 
   const [menuVisible, setMenuVisible] = useState(false);
-
-
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newHora = new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-
-      setHora(newHora);  // Actualiza la hora
-    }, 1000);  // Actualiza cada segundo
-
-    return () => clearInterval(interval);  // Limpia el intervalo cuando se desmonta
-  }, []);
+  const [nombreUsuario, setNombreUsuario] = useState<string>(''); // ✅ dentro del componente
 
   const toggleMenu = () => {
     setMenuVisible(!menuVisible);
   };
 
+  useEffect(() => {
+    const cargarUsuario = async () => {
+      try {
+        const usuarioID = 'usuario1'; // o dinámico según tu auth
+        const docRef = doc(db, 'Usuarios', usuarioID);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setNombreUsuario(docSnap.data().nombre); // nombre del usuario
+        } else {
+          console.log('No se encontró el usuario');
+        }
+      } catch (error) {
+        console.error('Error cargando usuario:', error);
+      }
+    };
 
+    cargarUsuario();
+  }, []);
 
   return (
-
     <View style={style.container}>
       {/* Menú deslizable */}
-<View style={style.menu}>
-
-  <Image source={require('@/assets/images/Gancho.png')} style={style.menuImage} />
-  <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
-  <TouchableOpacity onPress={()=> router.push('/Armario')}>
-  <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
-  </TouchableOpacity>
-  <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
-  <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
-  
-  
-</View>
+      <View style={style.menu}>
+        <TouchableOpacity onPress={() => router.push('/Armario')}>
+          <Image source={require('@/assets/images/Gancho.png')} style={style.menuImage} />
+        </TouchableOpacity>
+        <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
+        <TouchableOpacity onPress={() => console.log('Funciona')}>
+          <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
+        </TouchableOpacity>
+        <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
+        <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
+      </View>
 
       <Text style={style.horaTexto}>{hora}</Text>
-      <Text style={style.subtitle}>¡Bienvenido Gabriel!</Text>
-            <Image
-        source={require('@/assets/images/Logo_GarzaStyle.png')}
-        style={style.GarzaLogo}
-      />
+      <Text style={style.subtitle}>¡Bienvenido {nombreUsuario}!</Text>
+      <Image source={require('@/assets/images/Logo_GarzaStyle.png')} style={style.GarzaLogo} />
 
       <View style={style.menuRedes}>
-
-      <TouchableOpacity onPress={()=>console.log('hola')}>
-      <Image
-        source={require('@/assets/images/compartir.png')}
-        style={style.menuImageRedes}
-      /></TouchableOpacity>
-      <TouchableOpacity onPress={()=> console.log('hola')}>
-            <Image
-        source={require('@/assets/images/corazon.png')}
-        style={style.menuImageRedes}
-      /></TouchableOpacity>
-      <TouchableOpacity onPress={()=>console.log('holi')}>
-      <Image
-        source={require('@/assets/images/enviar.png')}
-        style={style.menuImageRedes}
-      /></TouchableOpacity></View>
+        <TouchableOpacity onPress={() => console.log('hola')}>
+          <Image source={require('@/assets/images/compartir.png')} style={style.menuImageRedes} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => console.log('hola')}>
+          <Image source={require('@/assets/images/corazon.png')} style={style.menuImageRedes} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => console.log('holi')}>
+          <Image source={require('@/assets/images/enviar.png')} style={style.menuImageRedes} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
+
 
 
 const style = StyleSheet.create({
