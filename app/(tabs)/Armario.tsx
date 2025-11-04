@@ -1,331 +1,283 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { db, storage } from '../../firebaseConfig';
+import React, { useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useHora } from '../Hora';
 
-
-
-
 const screenWidth = Dimensions.get('window').width;
+const screenHeight = Dimensions.get('window').height;
 
 export default function HoraLocalScreen() {
+  const hora = useHora();
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const translateX = useRef(new Animated.Value(screenWidth)).current;
 
-useEffect(() => {
-  const cargarImagenes = async () => {
-    try {
-      const secciones = ['Accesorios', 'Camisas / Playeras', 'Pantalones / Shorts / Faldas', 'Tenis / Zapatos'];
-      const nuevasImagenes: { [key: string]: string[] } = {};
-      
-      for (const seccion of secciones) {
-        const q = query(
-          collection(db, 'Prendas'),
-          where('usuarioID', '==', 'usuario1'),
-          where('seccion', '==', seccion)
-        );
-        const snapshot = await getDocs(q);
-        nuevasImagenes[seccion] = snapshot.docs.map(doc => doc.data().fotoURL);
-      }
-
-      setImagenesPorSeccion(nuevasImagenes);
-    } catch (error) {
-      console.error('❌ Error cargando imágenes:', error);
+  const toggleMenu = () => {
+    if (menuVisible) {
+      Animated.timing(translateX, {
+        toValue: screenWidth,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setTimeout(() => setMenuVisible(false), 10));
+    } else {
+      setMenuVisible(true);
+      Animated.timing(translateX, {
+        toValue: screenWidth * 0.4,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
   };
 
-  cargarImagenes();
-}, []);
+  return (
+    <View style={style.container}>
+      {/* ☰ Botón menú */}
+      <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
+        <Text style={style.menuIcon}>☰</Text>
+      </TouchableOpacity>
 
-
-    const hora = useHora();
-    const [menuVisible, setMenuVisible] = useState(false);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{[key: string]: string[]}>({
-        'Accesorios': [],
-        'Camisas / Playeras': [],
-        'Pantalones / Shorts / Faldas': [],
-        'Tenis / Zapatos': []
-    });
-    const translateX = useRef(new Animated.Value(screenWidth)).current;
-    
-
-    const toggleMenu = () => {
-        if (menuVisible) {
-            Animated.timing(translateX, {
-                toValue: screenWidth,
-                duration: 300,
-                useNativeDriver: true,
-            }).start(() => { setTimeout(() => { setMenuVisible(false); }, 10); });
-        } else {
-            setMenuVisible(true);
-            Animated.timing(translateX, {
-                toValue: screenWidth * 0.4,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        }
-    };
-    
-
-    // Función para subir imagen y actualizar UI
-    const subirImagen = async (usuarioID: string, seccion: string) => {
-        try {
-            // Permisos de galería
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Permiso denegado', 'Necesitamos acceso a la galería para seleccionar imagen.');
-                return;
-            }
-
-            // Seleccionar imagen
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.8,
-            });
-
-            if (result.canceled) return;
-
-            const asset = result.assets[0];
-            const uri = asset.uri;
-
-            // Convertir a blob
-            const response = await fetch(uri);
-            const blob = await response.blob();
-
-            // Crear referencia Storage
-            const timestamp = Date.now();
-            const storagePath = `prendas/${usuarioID}/${timestamp}.jpg`;
-            const storageRef = ref(storage, storagePath);
-
-            // Subir imagen
-            await uploadBytesResumable(storageRef, blob);
-
-            // Obtener URL de descarga
-            const downloadURL = await getDownloadURL(storageRef);
-
-            // Guardar en Firestore
-            await addDoc(collection(db, 'Prendas'), {
-                usuarioID,
-                nombre: 'Nombre temporal',
-                talla: 'M',
-                fotoURL: downloadURL,
-                fechaSubida: new Date().toISOString(),
-                publica: false,
-                seccion
-            });
-
-            // Actualizar estado local para mostrar imagen
-            setImagenesPorSeccion(prev => ({
-                ...prev,
-                [seccion]: [...prev[seccion], downloadURL]
-            }));
-
-            Alert.alert('✅ Subida exitosa', 'La imagen se ha cargado correctamente.');
-        } catch (error) {
-            console.error('❌ Error subiendo imagen:', error);
-            Alert.alert('Error', 'No se pudo subir la imagen. Revisa la consola.');
-        }
-    };
-
-    return (
-        <View style={style.container}>
-
-            {/* Botón menú */}
-            <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
-                <Text style={style.menuIcon}>☰</Text>
+      {/* Menú deslizable */}
+      {menuVisible && (
+        <Pressable style={style.overlay} onPress={toggleMenu}>
+          <Animated.View
+            style={[
+              style.menu,
+              {
+                transform: [
+                  {
+                    translateX: translateX.interpolate({
+                      inputRange: [screenWidth * 0.4, screenWidth],
+                      outputRange: [0, screenWidth * 0.6],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            onStartShouldSetResponder={() => true}
+          >
+            <TouchableOpacity onPress={() => router.push('/Home')}>
+              <Image
+                source={require('@/assets/images/House.png')}
+                style={style.menuImage}
+              />
             </TouchableOpacity>
 
-            {/* Menú deslizable */}
-            {menuVisible && (
-                <Pressable style={style.overlay} onPress={toggleMenu}>
-                    <Animated.View
-                        style={[
-                            style.menu,
-                            {
-                                transform: [
-                                    {
-                                        translateX: translateX.interpolate({
-                                            inputRange: [screenWidth * 0.4, screenWidth],
-                                            outputRange: [0, screenWidth * 0.6],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                        onStartShouldSetResponder={() => true}
-                    >
-                        <TouchableOpacity onPress={() => router.push('/Home')}>
-                            <Image source={require('@/assets/images/House.png')} style={style.menuImage} />
-                        </TouchableOpacity>
+            <TouchableOpacity onPress={() => console.log('aun no')}>
+              <Image
+                source={require('@/assets/images/Camara.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
-                        </TouchableOpacity>
+            <TouchableOpacity onPress={() => console.log('aun no')}>
+              <Image
+                source={require('@/assets/images/Camisa.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
-                        </TouchableOpacity>
+            <TouchableOpacity onPress={() => console.log('aun no')}>
+              <Image
+                source={require('@/assets/images/Pantalon.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
-                        </TouchableOpacity>
+            <TouchableOpacity onPress={() => console.log('aun no')}>
+              <Image
+                source={require('@/assets/images/Guardar.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+        </Pressable>
+      )}
 
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
-                        </TouchableOpacity>
-                    </Animated.View>
-                </Pressable>
-            )}
+      {/* Hora arriba */}
+      <Text style={style.horaTexto}>{hora}</Text>
 
-            <Text style={style.horaTexto}>{hora}</Text>
-            <Text style={style.subtitle}>TUS GUARDADOS</Text>
-            <Text style={style.subtitle2}>LOCAL</Text>
-            <Image source={require('@/assets/images/Logo_GarzaStyle.png')} style={style.GarzaLogo} />
+      {/* Logo y títulos */}
+      <View style={style.headerContainer}>
+        <Image
+          source={require('@/assets/images/Logo_GarzaStyle.png')}
+          style={style.GarzaLogo}
+        />
+        <Text style={style.subtitle}>GLOBALES</Text>
+      </View>
 
-            {/* Secciones horizontales */}
-            <View style={style.sectionsContainer}>
-                {['Accesorios', 'Camisas / Playeras', 'Pantalones / Shorts / Faldas', 'Tenis / Zapatos'].map((title, idx) => (
-                    <View key={idx} style={style.section}>
-                        <Text style={style.sectionTitle}>{title}</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {/* Botón "+" */}
-                            <TouchableOpacity
-                                style={style.placeholderItem}
-                                onPress={() => { setModalVisible(false); subirImagen('usuario1', title); }}
-                            >
-                                <Text style={{ fontSize: 24, fontWeight: 'bold' }}>+</Text>
-                            </TouchableOpacity>
+      {/* Secciones horizontales */}
+      <View style={style.sectionsContainer}>
+        {['Accesorios', 'Camisas / Playeras', 'Pantalones / Shorts / Faldas', 'Tenis / Zapatos'].map((title, idx) => (
+          <View key={idx} style={style.section}>
+            <Text style={style.sectionTitle}>{title}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <TouchableOpacity
+                style={style.placeholderItem}
+                onPress={() => setModalVisible(true)}>
+                <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#ec407a' }}>+</Text>
+              </TouchableOpacity>
+              {[2, 3].map((i) => (
+                <View key={i} style={style.placeholderItem}>
+                  <Text style={{ color: '#ad1457' }}>Item {i}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ))}
+      </View>
 
-                            {/* Mostrar imágenes subidas */}
-                            {imagenesPorSeccion[title].map((uri, index) => (
-                                <View key={index} style={style.placeholderItem}>
-                                    <Image source={{ uri }} style={{ width: 80, height: 80, borderRadius: 8 }} />
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
-                ))}
-            </View>
-
-            {/* Modal flotante */}
-            <Modal transparent visible={modalVisible} animationType="fade">
-                <Pressable style={style.modalOverlay} onPress={() => setModalVisible(false)}>
-                    <View style={style.modalContent}>
-                        <TouchableOpacity
-                            style={style.modalButton}
-                            onPress={() => { setModalVisible(false); subirImagen('usuario1', 'Camisas / Playeras'); }}
-                        >
-                            <Text>Galería</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[style.modalButton, { opacity: 0.5 }]}>
-                            <Text>Cámara</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Pressable>
-            </Modal>
-        </View>
-    );
+      {/* Modal para "+" */}
+      <Modal transparent visible={modalVisible} animationType="fade">
+        <Pressable style={style.modalOverlay} onPress={() => setModalVisible(false)}>
+          <View style={style.modalContent}>
+            <TouchableOpacity style={style.modalButton}>
+              <Text style={style.modalText}>Galería</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[style.modalButton, { opacity: 0.5 }]}>
+              <Text style={style.modalText}>Cámara</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
+  );
 }
 
-
-
 const style = StyleSheet.create({
-    subtitle2: { fontSize: 20, fontWeight: 'bold', color: 'gray', marginBottom: 10, position: 'absolute', top: 160, left: 30 },
   container: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#000000ff',
   },
-  menuButton: { position: 'absolute', top: 90, right: 20, zIndex: 100, backgroundColor: '#eee', padding: 10, borderRadius: 5 },
-    menuIcon: { fontSize: 28, color: '#000000' },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'Black',
-    marginBottom: 10,
-    position: 'absolute',
-    top: 120,
-    left: 30,
+  headerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: screenHeight * 0.08,
   },
-   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0)', zIndex: 100 },
-    sectionsContainer: { width: '100%', paddingHorizontal: 10, marginTop: 100 },
-    section: { marginBottom: 15 },
-    sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 5, marginLeft: 5 },
   GarzaLogo: {
-    height: 150,
-    width: '60%',
-    bottom: 630,
-    left: 20,
-    position: 'absolute',
+    width: screenWidth * 0.6,
+    height: undefined,
+    aspectRatio: 2,
     resizeMode: 'contain',
   },
-  menuRedes: {
-    position: 'absolute',
-    top: 600,
-    right: 4,
-    width: '98%',
-    height: '15%',
-    backgroundColor: '#ffffffff',
-    padding: 20,
-    zIndex: 101,
-    elevation: 0,
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    shadowOffset: { width: 0, height: 0 },
-    borderRadius: 10,
-    flexDirection:'row',
-    justifyContent: 'space-around',
-  },
-  menuImageRedes: {
-    height: 75,
-    width: 75,
-    resizeMode: 'contain',
+  subtitle: {
+    fontSize: screenWidth * 0.045,
+    fontWeight: 'bold',
+    color: '#ffffffff',
+    marginTop: screenHeight * 0.015,
   },
   horaTexto: {
-    fontSize: 18,
+    fontSize: screenWidth * 0.045,
     fontWeight: 'bold',
-    color: '#669339',
+    color: '#ffffffff',
     position: 'absolute',
-    top: 40,
-    right: 20,
+    top: screenHeight * 0.05,
+    right: screenWidth * 0.1,
+  },
+  menuButton: {
+    position: 'absolute',
+    top: screenHeight * 0.05,
+    left: screenWidth * 0.05,
+    zIndex: 100,
+    backgroundColor: '#000000ff',
+    padding: screenWidth * 0.02,
+    borderRadius: 8,
+    shadowColor: '#ad1457',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 1, height: 2 },
+  },
+  menuIcon: {
+    fontSize: screenWidth * 0.07,
+    color: '#ffffffff',
   },
   menu: {
     position: 'absolute',
-    top: 160,
-    right: 10,
+    top: screenHeight * 0.2,
+    right: screenWidth * 0.02,
     width: '30%',
     height: '50%',
-    backgroundColor: '#eee',
+    backgroundColor: '#ffffffff',
     padding: 20,
-    zIndex: 101,
+    borderRadius: 15,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: '#3a3638ff',
     shadowOpacity: 0.3,
     shadowOffset: { width: -2, height: 0 },
-    borderRadius: 10,
   },
   menuImage: {
-    height: 60,
+    height: screenWidth * 0.15,
     width: '100%',
     resizeMode: 'contain',
     marginBottom: 10,
   },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0)',
+    zIndex: 100,
+  },
+  sectionsContainer: {
+    width: '100%',
+    paddingHorizontal: screenWidth * 0.03,
+    marginTop: screenHeight * 0.03,
+  },
+  section: {
+    marginBottom: screenHeight * 0.02,
+  },
+  sectionTitle: {
+    fontSize: screenWidth * 0.04,
+    fontWeight: 'bold',
+    color: '#fe8cc3',
+    marginBottom: 5,
+    marginLeft: 5,
+  },
   placeholderItem: {
-    width: 100,
-    height: 100,
-    backgroundColor: '#eee',
-    marginRight: 10,
+    width: screenWidth * 0.22,
+    height: screenWidth * 0.22,
+    backgroundColor: '#ffffffff',
+    marginRight: screenWidth * 0.03,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 15,
   },
-  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', }, 
-  modalContent: { width: 200, padding: 20, backgroundColor: '#fff', borderRadius: 10, alignItems: 'center', }, 
-  modalButton: { width: '100%', padding: 10, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc', },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  modalContent: {
+    width: screenWidth * 0.6,
+    padding: 20,
+    backgroundColor: '#ffffffff',
+    borderRadius: 15,
+    alignItems: 'center',
+    shadowColor: '#000000ff',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 2, height: 4 },
+  },
+  modalButton: {
+    width: '100%',
+    padding: 12,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#0000',
+  },
+  modalText: {
+    color: '#000000',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
+

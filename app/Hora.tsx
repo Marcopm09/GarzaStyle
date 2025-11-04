@@ -1,10 +1,9 @@
-
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 // 1. Crear el contexto
 const HoraContext = createContext('');
 
-// 2. Definir props del proveedor
+// 2. Definir props del proveedor Cambio lol
 type HoraProviderProps = {
   children: ReactNode;
 };
