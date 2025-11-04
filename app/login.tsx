@@ -1,18 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    ImageBackground,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -36,13 +36,14 @@ export default function LoginScreen() {
 
   return (
     <>
-      {/* 🔥 Esto quita la barra negra del header */}
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ImageBackground
-        source={require("../assets/images/background.jpg")}
+      {/* 🌈 Fondo con degradado */}
+      <LinearGradient
+        colors={["#000000", "#523543", "#FF6FB4"]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
         style={styles.background}
-        resizeMode="cover"
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -105,7 +106,7 @@ export default function LoginScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </ImageBackground>
+      </LinearGradient>
     </>
   );
 }
