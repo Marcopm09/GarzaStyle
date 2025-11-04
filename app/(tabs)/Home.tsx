@@ -46,7 +46,7 @@ export default function HoraLocalScreen() {
 
   return (
     <View style={style.container}>
-      {/* Menú lateral */}
+
       <View style={style.menu}>
         <TouchableOpacity onPress={() => router.push('/Armario')}>
           <Image
