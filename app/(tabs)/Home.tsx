@@ -156,16 +156,4 @@ menuImage: {
   marginBottom: 10,
 },
 
-}); [{
-	"resource": "/c:/Users/Marco/Documents/GarzaStyle/app/(tabs)/Home.tsx",
-	"owner": "typescript",
-	"code": "2339",
-	"severity": 8,
-	"message": "Property 'create' does not exist on type '{ new (): StyleSheet; prototype: StyleSheet; }'.",
-	"source": "ts",
-	"startLineNumber": 74,
-	"startColumn": 26,
-	"endLineNumber": 74,
-	"endColumn": 32,
-	"origin": "extHost1"
-}]
+}); 
