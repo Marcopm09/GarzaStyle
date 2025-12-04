@@ -247,8 +247,7 @@ export default function HoraLocalScreen() {
       )}
 
       <Text style={style.horaTexto}>{hora}</Text>
-      <Text style={style.subtitle}>TUS GUARDADOS</Text>
-      <Text style={style.subtitle2}>LOCAL</Text>
+      <Text style={style.subtitle}>Tu armario digital!!</Text>
       <Image source={require('@/assets/images/Logo_GarzaStyle.png')} style={style.GarzaLogo} />
 
       {/* Contenido desplazable */}
@@ -328,12 +327,13 @@ export default function HoraLocalScreen() {
             onPress={() => setImagenSeleccionada(null)}
           />
           
+        <View style={style.contenedorImagenGrande}>
           <Image
             source={{ uri: imagenSeleccionada?.uri }}
             style={style.imagenGrande}
             resizeMode="contain"
           />
-
+        </View>
           {/* Botones inferiores */}
           <View style={style.botonesImagen}>
             <TouchableOpacity
@@ -379,14 +379,6 @@ const style = StyleSheet.create({
     color: 'white',
     position: 'absolute',
     top: height * 0.23,
-    left: width * 0.08,
-  },
-  subtitle2: {
-    fontSize: width * 0.045,
-    fontWeight: 'bold',
-    color: 'white',
-    position: 'absolute',
-    top: height * 0.28,
     left: width * 0.08,
   },
   horaTexto: {
@@ -435,7 +427,7 @@ const style = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     width: '100%',
-    marginTop: height * 0.27,
+    marginTop: height * 0.24,
     paddingHorizontal: width * 0.03,
   },
   section: {
@@ -507,9 +499,18 @@ const style = StyleSheet.create({
   modalImagenFondo: {
     ...StyleSheet.absoluteFillObject,
   },
-  imagenGrande: {
+  contenedorImagenGrande: {
     width: width * 0.9,
-    height: height * 0.7,
+    height: height * 0.9,
+    borderRadius: width * 0.05,
+    overflow: 'hidden',
+    backgroundColor: '#1a1a1a',
+    borderWidth: 2,
+    borderColor: '#333'
+  },
+  imagenGrande: {
+    width: '100%',
+    height: '100%',
   },
   botonesImagen: {
     position: 'absolute',
