@@ -81,7 +81,7 @@ export default function HoraLocalScreen() {
   horizontal
   showsHorizontalScrollIndicator={false}
   pagingEnabled={false} // desactivamos pagingEnabled porque snapToInterval hace lo mismo mejor
-  snapToInterval={200}  // ancho exacto de la imagen
+  snapToInterval={150}  // ancho exacto de la imagen
   snapToAlignment="start"
   decelerationRate="fast"
   contentContainerStyle={{ paddingRight: 0 }} // eliminar espacio extra
@@ -161,7 +161,7 @@ const style = StyleSheet.create({
   horaTexto: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#669339',
+    color: '#e76ba7ff',
     position: 'absolute',
     top: 40,
     right: 20,

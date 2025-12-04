@@ -1,20 +1,20 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Dimensions,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { db, storage } from '../../firebaseConfig';
 import { useHora } from '../Hora';
@@ -22,6 +22,24 @@ import { useHora } from '../Hora';
 const { width, height } = Dimensions.get('window');
 
 export default function HoraLocalScreen() {
+  const hora = useHora();
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [imagenSeleccionada, setImagenSeleccionada] = useState<{
+    uri: string;
+    seccion: string;
+    docId?: string;
+  } | null>(null);
+  const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ 
+    [key: string]: { uri: string; docId: string }[] 
+  }>({
+    Accesorios: [],
+    'Camisas / Playeras': [],
+    'Pantalones / Shorts / Faldas': [],
+    'Tenis / Zapatos': [],
+  });
+  const translateX = useRef(new Animated.Value(width)).current;
+
   useEffect(() => {
     const cargarImagenes = async () => {
       try {
@@ -31,7 +49,7 @@ export default function HoraLocalScreen() {
           'Pantalones / Shorts / Faldas',
           'Tenis / Zapatos',
         ];
-        const nuevasImagenes: { [key: string]: string[] } = {};
+        const nuevasImagenes: { [key: string]: any[] } = {};
 
         for (const seccion of secciones) {
           const q = query(
@@ -40,7 +58,10 @@ export default function HoraLocalScreen() {
             where('seccion', '==', seccion)
           );
           const snapshot = await getDocs(q);
-          nuevasImagenes[seccion] = snapshot.docs.map((doc) => doc.data().fotoURL);
+          nuevasImagenes[seccion] = snapshot.docs.map((doc) => ({
+            uri: doc.data().fotoURL,
+            docId: doc.id,
+          }));
         }
 
         setImagenesPorSeccion(nuevasImagenes);
@@ -51,17 +72,6 @@ export default function HoraLocalScreen() {
 
     cargarImagenes();
   }, []);
-
-  const hora = useHora();
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ [key: string]: string[] }>({
-    Accesorios: [],
-    'Camisas / Playeras': [],
-    'Pantalones / Shorts / Faldas': [],
-    'Tenis / Zapatos': [],
-  });
-  const translateX = useRef(new Animated.Value(width)).current;
 
   const toggleMenu = () => {
     if (menuVisible) {
@@ -81,6 +91,57 @@ export default function HoraLocalScreen() {
         duration: 300,
         useNativeDriver: true,
       }).start();
+    }
+  };
+
+  const eliminarImagen = async () => {
+    if (!imagenSeleccionada) return;
+
+    try {
+      Alert.alert(
+        '¿Eliminar imagen?',
+        'Esta acción no se puede deshacer',
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+          {
+            text: 'Eliminar',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // 1. Eliminar de Firestore
+                if (imagenSeleccionada.docId) {
+                  await deleteDoc(doc(db, 'Prendas', imagenSeleccionada.docId));
+                }
+
+                // 2. Eliminar de Storage
+                const imageRef = ref(storage, imagenSeleccionada.uri);
+                await deleteObject(imageRef);
+
+                // 3. Actualizar estado local
+                setImagenesPorSeccion((prev) => ({
+                  ...prev,
+                  [imagenSeleccionada.seccion]: prev[imagenSeleccionada.seccion].filter(
+                    (img) => img.uri !== imagenSeleccionada.uri
+                  ),
+                }));
+
+                // 4. Cerrar modal
+                setImagenSeleccionada(null);
+
+                Alert.alert('✅ Eliminado', 'La imagen se eliminó correctamente.');
+              } catch (error) {
+                console.error('❌ Error eliminando imagen:', error);
+                Alert.alert('Error', 'No se pudo eliminar la imagen.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('❌ Error:', error);
     }
   };
 
@@ -108,16 +169,17 @@ export default function HoraLocalScreen() {
 
       const timestamp = Date.now();
       const storagePath = `prendas/${usuarioID}/${timestamp}.jpg`;
-      const storageRef = ref(storage, storagePath);
+      const storageRefPath = ref(storage, storagePath);
 
-      await uploadBytesResumable(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
+      await uploadBytesResumable(storageRefPath, blob);
+      const downloadURL = await getDownloadURL(storageRefPath);
 
-      await addDoc(collection(db, 'Prendas'), {
+      const docRef = await addDoc(collection(db, 'Prendas'), {
         usuarioID,
         nombre: 'Nombre temporal',
         talla: 'M',
         fotoURL: downloadURL,
+        storagePath,
         fechaSubida: new Date().toISOString(),
         publica: false,
         seccion,
@@ -125,7 +187,7 @@ export default function HoraLocalScreen() {
 
       setImagenesPorSeccion((prev) => ({
         ...prev,
-        [seccion]: [...prev[seccion], downloadURL],
+        [seccion]: [...prev[seccion], { uri: downloadURL, docId: docRef.id }],
       }));
 
       Alert.alert('✅ Subida exitosa', 'La imagen se ha cargado correctamente.');
@@ -210,10 +272,14 @@ export default function HoraLocalScreen() {
                   <Text style={{ fontSize: width * 0.07, fontWeight: 'bold' }}>+</Text>
                 </TouchableOpacity>
 
-                {imagenesPorSeccion[title].map((uri, index) => (
-                  <View key={index} style={style.placeholderItem}>
-                    <Image source={{ uri }} style={style.imageItem} />
-                  </View>
+                {imagenesPorSeccion[title].map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={style.placeholderItem}
+                    onPress={() => setImagenSeleccionada({ uri: item.uri, seccion: title, docId: item.docId })}
+                  >
+                    <Image source={{ uri: item.uri }} style={style.imageItem} />
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
@@ -229,7 +295,7 @@ export default function HoraLocalScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Modal */}
+      {/* Modal de galería/cámara */}
       <Modal transparent visible={modalVisible} animationType="fade">
         <Pressable style={style.modalOverlay} onPress={() => setModalVisible(false)}>
           <View style={style.modalContent}>
@@ -247,6 +313,44 @@ export default function HoraLocalScreen() {
             </TouchableOpacity>
           </View>
         </Pressable>
+      </Modal>
+
+      {/* Modal de imagen completa */}
+      <Modal
+        visible={imagenSeleccionada !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImagenSeleccionada(null)}
+      >
+        <View style={style.modalImagenCompleta}>
+          <Pressable
+            style={style.modalImagenFondo}
+            onPress={() => setImagenSeleccionada(null)}
+          />
+          
+          <Image
+            source={{ uri: imagenSeleccionada?.uri }}
+            style={style.imagenGrande}
+            resizeMode="contain"
+          />
+
+          {/* Botones inferiores */}
+          <View style={style.botonesImagen}>
+            <TouchableOpacity
+              style={[style.botonAccion, style.botonEliminar]}
+              onPress={eliminarImagen}
+            >
+              <Text style={style.textoBoton}>🗑️ Eliminar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[style.botonAccion, style.botonCerrar]}
+              onPress={() => setImagenSeleccionada(null)}
+            >
+              <Text style={style.textoBoton}>✕ Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -295,7 +399,7 @@ const style = StyleSheet.create({
   },
   menuButton: {
     position: 'absolute',
-    top: height * 0.09,
+    top: height * 0.15,
     right: width * 0.05,
     backgroundColor: '#a4a2a2ff',
     padding: width * 0.025,
@@ -308,7 +412,7 @@ const style = StyleSheet.create({
   },
   menu: {
     position: 'absolute',
-    top: height * 0.18,
+    top: height * 0.25,
     right: width * 0.02,
     width: width * 0.35,
     height: height * 0.5,
@@ -331,7 +435,7 @@ const style = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     width: '100%',
-    marginTop: height * 0.35,
+    marginTop: height * 0.27,
     paddingHorizontal: width * 0.03,
   },
   section: {
@@ -392,5 +496,45 @@ const style = StyleSheet.create({
     width: width * 0.3,
     height: width * 0.15,
     resizeMode: 'contain',
+  },
+  // Estilos para el modal de imagen completa
+  modalImagenCompleta: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImagenFondo: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  imagenGrande: {
+    width: width * 0.9,
+    height: height * 0.7,
+  },
+  botonesImagen: {
+    position: 'absolute',
+    bottom: height * 0.05,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: width * 0.1,
+  },
+  botonAccion: {
+    paddingVertical: height * 0.02,
+    paddingHorizontal: width * 0.08,
+    borderRadius: width * 0.03,
+    minWidth: width * 0.35,
+    alignItems: 'center',
+  },
+  botonEliminar: {
+    backgroundColor: '#ff4444',
+  },
+  botonCerrar: {
+    backgroundColor: '#666',
+  },
+  textoBoton: {
+    color: 'white',
+    fontSize: width * 0.04,
+    fontWeight: 'bold',
   },
 });
