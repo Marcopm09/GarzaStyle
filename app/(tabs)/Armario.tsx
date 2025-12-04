@@ -355,7 +355,7 @@ export default function HoraLocalScreen() {
     </View>
   );
 }
-
+//nuevo cambio
 const style = StyleSheet.create({
   container: {
     flex: 1,
