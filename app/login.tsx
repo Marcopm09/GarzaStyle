@@ -1,18 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    ImageBackground,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -35,73 +35,76 @@ export default function LoginScreen() {
   const { height, width } = Dimensions.get("window");
 
   return (
-    <ImageBackground
-      source={require("../assets/images/background.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ImageBackground
+        source={require("../assets/images/background.png")}
+        style={styles.background}
+        resizeMode="cover"
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContainer,
-            { paddingVertical: height * 0.1 },
-          ]}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          <View
-            style={[
-              styles.overlay,
-              {
-                width: width * 0.85,
-                paddingVertical: height < 700 ? 20 : 40, // más compacto en pantallas chicas
-              },
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContainer,
+              { paddingVertical: height * 0.1 },
             ]}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={[styles.title, { fontSize: width < 360 ? 32 : 40 }]}>
-              ¡HOLA!
-            </Text>
-
-            <Text
-              style={[styles.subtitle, { fontSize: width < 360 ? 13 : 16 }]}
+            <View
+              style={[
+                styles.overlay,
+                {
+                  width: width * 0.85,
+                  paddingVertical: height < 700 ? 20 : 40,
+                },
+              ]}
             >
-              INGRESA CON TU CUENTA
-            </Text>
+              <Text style={[styles.title, { fontSize: width < 360 ? 32 : 40 }]}>
+                ¡HOLA!
+              </Text>
 
-            <TextInput
-              placeholder="Dirección de correo"
-              placeholderTextColor="#828282ff"
-              value={email}
-              onChangeText={setEmail}
-              style={styles.input}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+              <Text
+                style={[styles.subtitle, { fontSize: width < 360 ? 13 : 16 }]}
+              >
+                INGRESA CON TU CUENTA
+              </Text>
 
-            <TextInput
-              placeholder="Contraseña"
-              placeholderTextColor="#828282ff"
-              value={password}
-              secureTextEntry
-              onChangeText={setPassword}
-              style={styles.input}
-            />
+              <TextInput
+                placeholder="Dirección de correo"
+                placeholderTextColor="#828282ff"
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
 
-            <Text style={styles.link}>¿OLVIDASTE TU CONTRASEÑA?</Text>
+              <TextInput
+                placeholder="Contraseña"
+                placeholderTextColor="#828282ff"
+                value={password}
+                secureTextEntry
+                onChangeText={setPassword}
+                style={styles.input}
+              />
 
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-              <Text style={styles.buttonText}>INGRESAR</Text>
-            </TouchableOpacity>
+              <Text style={styles.link}>¿OLVIDASTE TU CONTRASEÑA?</Text>
 
-            <Text style={styles.link} onPress={goToRegister}>
-              ¿NO TIENES CUENTA?
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ImageBackground>
+              <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                <Text style={styles.buttonText}>INGRESAR</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.link} onPress={goToRegister}>
+                ¿NO TIENES CUENTA?
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ImageBackground>
+    </>
   );
 }
 

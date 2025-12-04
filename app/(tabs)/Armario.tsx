@@ -355,7 +355,7 @@ export default function HoraLocalScreen() {
     </View>
   );
 }
-
+//nuevo cambio
 const style = StyleSheet.create({
   container: {
     flex: 1,
@@ -489,7 +489,7 @@ const style = StyleSheet.create({
     height: width * 0.15,
     resizeMode: 'contain',
   },
-  // Estilos para el modal de imagen completa
+  // Estilos para el modal de imagen completa sss
   modalImagenCompleta: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
