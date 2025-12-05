@@ -67,9 +67,15 @@ export default function HoraLocalScreen() {
     cargarImagenes();
   }, []);
 
-  // Tamaños adaptables para diferentes dispositivos
-  const carouselImageWidth = isTablet ? wp(25) : wp(35);
-  const carouselImageHeight = isTablet ? hp(12) : hp(11);
+  // Tamaño cuadrado para las imágenes
+// Tamaño más personalizado
+const carouselImageSize = isTablet 
+  ? wp(20)              // Tablet: 20% del ancho
+  : isSmallDevice 
+    ? wp(25)            // Pequeño: 25% del ancho
+    : isMediumDevice 
+      ? wp(27)          // Mediano: 27% del ancho
+      : wp(28);         // Normal: 28% del ancho
 
   return (
     <View style={style.container}>
@@ -91,15 +97,15 @@ export default function HoraLocalScreen() {
         showsVerticalScrollIndicator={false}
       >
         {secciones.map((seccion, idx) => (
-          <View key={idx} style={[style.carouselBox, { width: carouselImageWidth }]}>
+          <View key={idx} style={[style.carouselBox, { width: carouselImageSize }]}>
             <FlatList
               data={imagenesPorSeccion[seccion] && imagenesPorSeccion[seccion].length > 0 
                 ? imagenesPorSeccion[seccion] 
-                : [null]} // Muestra placeholder si no hay imágenes
+                : [null]}
               horizontal
               showsHorizontalScrollIndicator={false}
               pagingEnabled={false}
-              snapToInterval={carouselImageWidth}
+              snapToInterval={carouselImageSize}
               snapToAlignment="start"
               decelerationRate="fast"
               contentContainerStyle={{ paddingRight: 0 }}
@@ -109,14 +115,20 @@ export default function HoraLocalScreen() {
                     source={{ uri: item }}
                     style={[
                       style.carouselImageSingle,
-                      { width: carouselImageWidth, height: carouselImageHeight }
+                      { 
+                        width: carouselImageSize,
+                        height: carouselImageSize
+                      }
                     ]}
                   />
                 ) : (
                   <View 
                     style={[
                       style.emptyBoxSingle,
-                      { width: carouselImageWidth, height: carouselImageHeight }
+                      { 
+                        width: carouselImageSize,
+                        height: carouselImageSize
+                      }
                     ]}
                   >
                     <Text style={style.emptyText}>Sin imágenes</Text>
@@ -150,7 +162,7 @@ export default function HoraLocalScreen() {
           <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
         </TouchableOpacity>
         
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.push('/Guardados')} activeOpacity={0.7}>
           <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
         </TouchableOpacity>
       </View>
@@ -184,14 +196,14 @@ const style = StyleSheet.create({
   GarzaLogo: {
     height: isTablet ? hp(15) : hp(18),
     width: isTablet ? wp(40) : wp(60),
-    top: isSmallDevice ? hp(2) : hp(3),
+    top: isTablet ? hp(-2) : isSmallDevice ? hp(-1) : hp(-2), // 👈 SUBIDO: valores negativos lo mueven hacia arriba
     left: wp(5),
     position: 'absolute',
     resizeMode: 'contain',
   },
   subtitle: {
     position: 'absolute',
-    top: isTablet ? hp(23) : isSmallDevice ? hp(17) : hp(19), // ⬅️ CAMBIO AQUÍ: más separado
+    top: isTablet ? hp(15) : isSmallDevice ? hp(13) : hp(11), // 👈 SUBIDO: valores más bajos
     left: wp(5),
     fontSize: isSmallDevice ? 14 : isMediumDevice ? 16 : isTablet ? 22 : 18,
     fontWeight: 'bold',
@@ -210,8 +222,8 @@ const style = StyleSheet.create({
   carouselContainer: {
     flex: 1,
     marginRight: wp(2.5),
-    marginTop: isTablet ? hp(27) : isSmallDevice ? hp(20) : hp(22), // ⬅️ CAMBIO AQUÍ: más separado
-    marginLeft: isTablet ? wp(8) : wp(12),
+    marginTop: isTablet ? hp(20) : isSmallDevice ? hp(20) : hp(13), // 👈 SUBIDO: valores más bajos
+    marginLeft: isTablet ? wp(15) : wp(18),
   },
   carouselBox: {
     marginBottom: hp(1.5),
@@ -223,6 +235,7 @@ const style = StyleSheet.create({
     borderColor: '#ccc',
     marginRight: 0,
     resizeMode: 'cover',
+    overflow: 'hidden',
   },
   emptyBoxSingle: {
     borderRadius: 8,

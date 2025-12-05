@@ -145,7 +145,7 @@ export default function HoraLocalScreen() {
       console.error('❌ Error:', error);
     }
   };
-
+//El apratdo para subir imagenes 
   const subirImagen = async (usuarioID: string, seccion: string) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -198,6 +198,7 @@ export default function HoraLocalScreen() {
     }
   };
 
+  //la parte de la camara
   const tomarFoto = async (usuarioID: string, seccion: string) => {
   try {
     // Solicitar permisos de cámara
@@ -252,6 +253,9 @@ export default function HoraLocalScreen() {
   }
 };
 
+
+
+//lo que se ve en la app 
   return (
     <View style={style.container}>
       {/* Botón menú */}
@@ -458,6 +462,7 @@ const style = StyleSheet.create({
     fontSize: width * 0.07,
     color: '#000',
   },
+  //para el menu
   menu: {
     position: 'absolute',
     top: height * 0.25,
