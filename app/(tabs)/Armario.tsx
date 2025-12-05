@@ -25,6 +25,7 @@ export default function HoraLocalScreen() {
   const hora = useHora();
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [seccionSeleccionada, setSeccionSeleccionada] = useState<string>('');
   const [imagenSeleccionada, setImagenSeleccionada] = useState<{
     uri: string;
     seccion: string;
@@ -197,6 +198,60 @@ export default function HoraLocalScreen() {
     }
   };
 
+  const tomarFoto = async (usuarioID: string, seccion: string) => {
+  try {
+    // Solicitar permisos de cámara
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a la cámara.');
+      return;
+    }
+
+    // Abrir cámara
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    const uri = asset.uri;
+
+    // Subir imagen (mismo código que subirImagen)
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    const timestamp = Date.now();
+    const storagePath = `prendas/${usuarioID}/${timestamp}.jpg`;
+    const storageRefPath = ref(storage, storagePath);
+
+    await uploadBytesResumable(storageRefPath, blob);
+    const downloadURL = await getDownloadURL(storageRefPath);
+
+    const docRef = await addDoc(collection(db, 'Prendas'), {
+      usuarioID,
+      nombre: 'Nombre temporal',
+      talla: 'M',
+      fotoURL: downloadURL,
+      storagePath,
+      fechaSubida: new Date().toISOString(),
+      publica: false,
+      seccion,
+    });
+
+    setImagenesPorSeccion((prev) => ({
+      ...prev,
+      [seccion]: [...prev[seccion], { uri: downloadURL, docId: docRef.id }],
+    }));
+
+    Alert.alert('✅ Foto guardada', 'La foto se ha guardado correctamente.');
+  } catch (error) {
+    console.error('❌ Error tomando foto:', error);
+    Alert.alert('Error', 'No se pudo tomar la foto.');
+  }
+};
+
   return (
     <View style={style.container}>
       {/* Botón menú */}
@@ -264,8 +319,8 @@ export default function HoraLocalScreen() {
                 <TouchableOpacity
                   style={style.placeholderItem}
                   onPress={() => {
-                    setModalVisible(false);
-                    subirImagen('usuario1', title);
+                    setSeccionSeleccionada(title);
+                    setModalVisible(true);
                   }}
                 >
                   <Text style={{ fontSize: width * 0.07, fontWeight: 'bold' }}>+</Text>
@@ -302,13 +357,14 @@ export default function HoraLocalScreen() {
               style={style.modalButton}
               onPress={() => {
                 setModalVisible(false);
-                subirImagen('usuario1', 'Camisas / Playeras');
+                subirImagen('usuario1', seccionSeleccionada);
               }}
             >
-              <Text>Galería</Text>
+              <Text style={style.textoModalButton}>Galería</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[style.modalButton, { opacity: 0.5 }]}>
-              <Text>Cámara</Text>
+
+            <TouchableOpacity style={style.modalButton} onPress={() =>{setModalVisible(false); tomarFoto ('usuario01', seccionSeleccionada)}}>
+              <Text style={style.textoModalButton}>Cámara</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -537,5 +593,13 @@ const style = StyleSheet.create({
     color: 'white',
     fontSize: width * 0.04,
     fontWeight: 'bold',
+  },
+
+  //estilo para el modal de la seleccion de subir imagen
+  textoModalButton: {
+    color: 'white',
+    fontSize: width * 0.045,
+    fontWeight: '600',
+
   },
 });
