@@ -2,10 +2,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  Animated,
   Dimensions,
   Image,
   Modal,
@@ -39,7 +38,10 @@ export default function HoraLocalScreen() {
     'Pantalones / Shorts / Faldas': [],
     'Tenis / Zapatos': [],
   });
-  const translateX = useRef(new Animated.Value(width)).current;
+  
+  // Reemplazar toast por modal simple
+  const [mensajeVisible, setMensajeVisible] = useState(false);
+  const [mensaje, setMensaje] = useState('');
 
   useEffect(() => {
     const cargarImagenes = async () => {
@@ -75,82 +77,66 @@ export default function HoraLocalScreen() {
   }, []);
 
   const toggleMenu = () => {
-    if (menuVisible) {
-      Animated.timing(translateX, {
-        toValue: width,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setTimeout(() => {
-          setMenuVisible(false);
-        }, 10);
-      });
-    } else {
-      setMenuVisible(true);
-      Animated.timing(translateX, {
-        toValue: width * 0.4,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
+    setMenuVisible(!menuVisible);
+  };
+
+  const mostrarMensaje = (texto: string) => {
+    setMensaje(texto);
+    setMensajeVisible(true);
+    setTimeout(() => {
+      setMensajeVisible(false);
+    }, 2000);
   };
 
   const eliminarImagen = async () => {
     if (!imagenSeleccionada) return;
 
-    try {
-      Alert.alert(
-        '¿Eliminar imagen?',
-        'Esta acción no se puede deshacer',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
-          {
-            text: 'Eliminar',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                // 1. Eliminar de Firestore
-                if (imagenSeleccionada.docId) {
-                  await deleteDoc(doc(db, 'Prendas', imagenSeleccionada.docId));
-                }
-
-                // 2. Eliminar de Storage
-                const imageRef = ref(storage, imagenSeleccionada.uri);
-                await deleteObject(imageRef);
-
-                // 3. Actualizar estado local
-                setImagenesPorSeccion((prev) => ({
-                  ...prev,
-                  [imagenSeleccionada.seccion]: prev[imagenSeleccionada.seccion].filter(
-                    (img) => img.uri !== imagenSeleccionada.uri
-                  ),
-                }));
-
-                // 4. Cerrar modal
-                setImagenSeleccionada(null);
-
-                Alert.alert('✅ Eliminado', 'La imagen se eliminó correctamente.');
-              } catch (error) {
-                console.error('❌ Error eliminando imagen:', error);
-                Alert.alert('Error', 'No se pudo eliminar la imagen.');
+    Alert.alert(
+      '¿Eliminar imagen?',
+      'Esta acción no se puede deshacer',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const imagenAEliminar = imagenSeleccionada;
+            setImagenSeleccionada(null);
+            
+            try {
+              if (imagenAEliminar.docId) {
+                await deleteDoc(doc(db, 'Prendas', imagenAEliminar.docId));
               }
-            },
+
+              const imageRef = ref(storage, imagenAEliminar.uri);
+              await deleteObject(imageRef);
+
+              setImagenesPorSeccion((prev) => ({
+                ...prev,
+                [imagenAEliminar.seccion]: prev[imagenAEliminar.seccion].filter(
+                  (img) => img.uri !== imagenAEliminar.uri
+                ),
+              }));
+
+              mostrarMensaje('✅ Imagen eliminada');
+            } catch (error) {
+              console.error('❌ Error eliminando imagen:', error);
+              mostrarMensaje('❌ Error al eliminar');
+            }
           },
-        ]
-      );
-    } catch (error) {
-      console.error('❌ Error:', error);
-    }
+        },
+      ]
+    );
   };
-//El apratdo para subir imagenes 
+
   const subirImagen = async (usuarioID: string, seccion: string) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'Necesitamos acceso a la galería.');
+        mostrarMensaje('Permiso denegado');
         return;
       }
 
@@ -191,97 +177,74 @@ export default function HoraLocalScreen() {
         [seccion]: [...prev[seccion], { uri: downloadURL, docId: docRef.id }],
       }));
 
-      Alert.alert('✅ Subida exitosa', 'La imagen se ha cargado correctamente.');
+      mostrarMensaje('✅ Imagen subida');
     } catch (error) {
       console.error('❌ Error subiendo imagen:', error);
-      Alert.alert('Error', 'No se pudo subir la imagen.');
+      mostrarMensaje('❌ Error al subir');
     }
   };
 
-  //la parte de la camara
   const tomarFoto = async (usuarioID: string, seccion: string) => {
-  try {
-    // Solicitar permisos de cámara
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permiso denegado', 'Necesitamos acceso a la cámara.');
-      return;
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        mostrarMensaje('Permiso denegado');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const uri = asset.uri;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const timestamp = Date.now();
+      const storagePath = `prendas/${usuarioID}/${timestamp}.jpg`;
+      const storageRefPath = ref(storage, storagePath);
+
+      await uploadBytesResumable(storageRefPath, blob);
+      const downloadURL = await getDownloadURL(storageRefPath);
+
+      const docRef = await addDoc(collection(db, 'Prendas'), {
+        usuarioID,
+        nombre: 'Nombre temporal',
+        talla: 'M',
+        fotoURL: downloadURL,
+        storagePath,
+        fechaSubida: new Date().toISOString(),
+        publica: false,
+        seccion,
+      });
+
+      setImagenesPorSeccion((prev) => ({
+        ...prev,
+        [seccion]: [...prev[seccion], { uri: downloadURL, docId: docRef.id }],
+      }));
+
+      mostrarMensaje('✅ Foto guardada');
+    } catch (error) {
+      console.error('❌ Error tomando foto:', error);
+      mostrarMensaje('❌ Error al tomar foto');
     }
+  };
 
-    // Abrir cámara
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    const uri = asset.uri;
-
-    // Subir imagen (mismo código que subirImagen)
-    const response = await fetch(uri);
-    const blob = await response.blob();
-
-    const timestamp = Date.now();
-    const storagePath = `prendas/${usuarioID}/${timestamp}.jpg`;
-    const storageRefPath = ref(storage, storagePath);
-
-    await uploadBytesResumable(storageRefPath, blob);
-    const downloadURL = await getDownloadURL(storageRefPath);
-
-    const docRef = await addDoc(collection(db, 'Prendas'), {
-      usuarioID,
-      nombre: 'Nombre temporal',
-      talla: 'M',
-      fotoURL: downloadURL,
-      storagePath,
-      fechaSubida: new Date().toISOString(),
-      publica: false,
-      seccion,
-    });
-
-    setImagenesPorSeccion((prev) => ({
-      ...prev,
-      [seccion]: [...prev[seccion], { uri: downloadURL, docId: docRef.id }],
-    }));
-
-    Alert.alert('✅ Foto guardada', 'La foto se ha guardado correctamente.');
-  } catch (error) {
-    console.error('❌ Error tomando foto:', error);
-    Alert.alert('Error', 'No se pudo tomar la foto.');
-  }
-};
-
-
-
-//lo que se ve en la app 
   return (
     <View style={style.container}>
-      {/* Botón menú */}
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
       </TouchableOpacity>
 
-      {/* Menú deslizable */}
       {menuVisible && (
         <>
           <Pressable style={style.overlay} onPress={toggleMenu} />
-          <Animated.View
-            style={[
-              style.menu,
-              {
-                transform: [
-                  {
-                    translateX: translateX.interpolate({
-                      inputRange: [width * 0.4, width],
-                      outputRange: [0, width * 0.6],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
+          <View style={style.menu}>
             <TouchableOpacity onPress={() => router.push('/Home')}>
               <Image source={require('@/assets/images/House.png')} style={style.menuImage} />
             </TouchableOpacity>
@@ -301,7 +264,7 @@ export default function HoraLocalScreen() {
             <TouchableOpacity>
               <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </>
       )}
 
@@ -309,7 +272,6 @@ export default function HoraLocalScreen() {
       <Text style={style.subtitle}>Tu armario digital!!</Text>
       <Image source={require('@/assets/images/Logo_GarzaStyle.png')} style={style.GarzaLogo} />
 
-      {/* Contenido desplazable */}
       <ScrollView
         style={style.scrollContainer}
         contentContainerStyle={{ paddingBottom: height * 0.1 }}
@@ -344,8 +306,10 @@ export default function HoraLocalScreen() {
           )
         )}
 
-        {/* 🔽 Botón que aparece al final del scroll */}
-        <TouchableOpacity style={style.bottomButton}>
+        <TouchableOpacity 
+          style={style.bottomButton} 
+          onPress={() => mostrarMensaje('Próximamente...')}
+        >
           <Image
             source={require('@/assets/images/bolsa.png')}
             style={style.bottomButtonImage}
@@ -353,7 +317,6 @@ export default function HoraLocalScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Modal de galería/cámara */}
       <Modal transparent visible={modalVisible} animationType="fade">
         <Pressable style={style.modalOverlay} onPress={() => setModalVisible(false)}>
           <View style={style.modalContent}>
@@ -367,14 +330,19 @@ export default function HoraLocalScreen() {
               <Text style={style.textoModalButton}>Galería</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={style.modalButton} onPress={() =>{setModalVisible(false); tomarFoto ('usuario01', seccionSeleccionada)}}>
+            <TouchableOpacity 
+              style={style.modalButton} 
+              onPress={() => {
+                setModalVisible(false); 
+                tomarFoto('usuario1', seccionSeleccionada);
+              }}
+            >
               <Text style={style.textoModalButton}>Cámara</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
       </Modal>
 
-      {/* Modal de imagen completa */}
       <Modal
         visible={imagenSeleccionada !== null}
         transparent
@@ -387,14 +355,14 @@ export default function HoraLocalScreen() {
             onPress={() => setImagenSeleccionada(null)}
           />
           
-        <View style={style.contenedorImagenGrande}>
-          <Image
-            source={{ uri: imagenSeleccionada?.uri }}
-            style={style.imagenGrande}
-            resizeMode="contain"
-          />
-        </View>
-          {/* Botones inferiores */}
+          <View style={style.contenedorImagenGrande}>
+            <Image
+              source={{ uri: imagenSeleccionada?.uri }}
+              style={style.imagenGrande}
+              resizeMode="contain"
+            />
+          </View>
+
           <View style={style.botonesImagen}>
             <TouchableOpacity
               style={[style.botonAccion, style.botonEliminar]}
@@ -412,10 +380,17 @@ export default function HoraLocalScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Mensaje simple sin animación */}
+      {mensajeVisible && (
+        <View style={style.mensajeContainer}>
+          <Text style={style.mensajeTexto}>{mensaje}</Text>
+        </View>
+      )}
     </View>
   );
 }
-//nuevo cambio
+
 const style = StyleSheet.create({
   container: {
     flex: 1,
@@ -462,7 +437,6 @@ const style = StyleSheet.create({
     fontSize: width * 0.07,
     color: '#000',
   },
-  //para el menu
   menu: {
     position: 'absolute',
     top: height * 0.25,
@@ -484,6 +458,7 @@ const style = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0)',
+    zIndex: 250,
   },
   scrollContainer: {
     flex: 1,
@@ -550,7 +525,6 @@ const style = StyleSheet.create({
     height: width * 0.15,
     resizeMode: 'contain',
   },
-  // Estilos para el modal de imagen completa sss
   modalImagenCompleta: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
@@ -599,12 +573,25 @@ const style = StyleSheet.create({
     fontSize: width * 0.04,
     fontWeight: 'bold',
   },
-
-  //estilo para el modal de la seleccion de subir imagen
   textoModalButton: {
     color: 'white',
     fontSize: width * 0.045,
     fontWeight: '600',
-
+  },
+  // Nuevo estilo para mensaje simple
+  mensajeContainer: {
+    position: 'absolute',
+    top: '45%',
+    left: '15%',
+    right: '15%',
+    backgroundColor: '#000000dd',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  mensajeTexto: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
