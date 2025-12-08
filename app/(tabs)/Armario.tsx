@@ -578,7 +578,7 @@ const style = StyleSheet.create({
     fontSize: width * 0.045,
     fontWeight: '600',
   },
-  // Nuevo estilo para mensaje simple
+  // Nuevo estilo para mensaje simple gris te amo
   mensajeContainer: {
     position: 'absolute',
     top: '45%',
