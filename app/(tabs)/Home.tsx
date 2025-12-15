@@ -10,6 +10,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -157,6 +158,8 @@ export default function HoraLocalScreen() {
 
   return (
     <View style={style.container}>
+      <StatusBar hidden={true} />
+      
       <Image 
         source={require('@/assets/images/Logo_GarzaStyle.png')} 
         style={style.GarzaLogo} 

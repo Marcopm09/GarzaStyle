@@ -8,8 +8,10 @@ import {
   Dimensions,
   Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,6 +21,15 @@ import { db, storage } from '../../firebaseConfig';
 import { useHora } from '../Hora';
 
 const { width, height } = Dimensions.get('window');
+
+// Funciones responsivas
+const wp = (percentage: number) => (width * percentage) / 100;
+const hp = (percentage: number) => (height * percentage) / 100;
+
+// Detección de tamaño de dispositivo
+const isSmallDevice = width < 360;
+const isMediumDevice = width >= 360 && width < 400;
+const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
   const hora = useHora();
@@ -39,7 +50,6 @@ export default function HoraLocalScreen() {
     'Tenis / Zapatos': [],
   });
   
-  // Reemplazar toast por modal simple
   const [mensajeVisible, setMensajeVisible] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
@@ -237,6 +247,8 @@ export default function HoraLocalScreen() {
 
   return (
     <View style={style.container}>
+      <StatusBar hidden={true} />
+      
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
       </TouchableOpacity>
@@ -274,7 +286,7 @@ export default function HoraLocalScreen() {
 
       <ScrollView
         style={style.scrollContainer}
-        contentContainerStyle={{ paddingBottom: height * 0.1 }}
+        contentContainerStyle={{ paddingBottom: hp(10) }}
         showsVerticalScrollIndicator={false}
       >
         {['Accesorios', 'Camisas / Playeras', 'Pantalones / Shorts / Faldas', 'Tenis / Zapatos'].map(
@@ -289,7 +301,7 @@ export default function HoraLocalScreen() {
                     setModalVisible(true);
                   }}
                 >
-                  <Text style={{ fontSize: width * 0.07, fontWeight: 'bold' }}>+</Text>
+                  <Text style={style.plusIcon}>+</Text>
                 </TouchableOpacity>
 
                 {imagenesPorSeccion[title].map((item, index) => (
@@ -381,7 +393,6 @@ export default function HoraLocalScreen() {
         </View>
       </Modal>
 
-      {/* Mensaje simple sin animación */}
       {mensajeVisible && (
         <View style={style.mensajeContainer}>
           <Text style={style.mensajeTexto}>{mensaje}</Text>
@@ -394,66 +405,70 @@ export default function HoraLocalScreen() {
 const style = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000ff',
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: height * 0.05,
+    paddingTop: Platform.OS === 'ios' ? hp(3) : hp(2),
     position: 'relative',
   },
   GarzaLogo: {
-    width: width * 0.6,
-    height: height * 0.15,
+    width: isTablet ? wp(40) : wp(60),
+    height: isTablet ? hp(12) : hp(15),
     resizeMode: 'contain',
     position: 'absolute',
-    top: height * 0.08,
+    top: isTablet ? hp(5) : hp(8),
     alignSelf: 'center',
   },
   subtitle: {
-    fontSize: width * 0.05,
+    fontSize: isSmallDevice ? wp(4) : isTablet ? wp(3.5) : wp(5),
     fontWeight: 'bold',
     color: 'white',
     position: 'absolute',
-    top: height * 0.23,
-    left: width * 0.08,
+    top: isTablet ? hp(18) : hp(23),
+    left: wp(8),
   },
   horaTexto: {
-    fontSize: width * 0.045,
+    fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(3) : wp(4.5),
     fontWeight: 'bold',
-    color: '#ffffffff',
+    color: '#ffffff',
     position: 'absolute',
-    top: height * 0.05,
-    right: width * 0.08,
+    top: Platform.OS === 'ios' ? hp(3) : hp(2),
+    right: wp(8),
   },
   menuButton: {
     position: 'absolute',
-    top: height * 0.15,
-    right: width * 0.05,
-    backgroundColor: '#a4a2a2ff',
-    padding: width * 0.025,
-    borderRadius: width * 0.02,
+    top: isTablet ? hp(12) : hp(15),
+    right: wp(5),
+    backgroundColor: '#a4a2a2',
+    padding: isTablet ? wp(1.5) : wp(2.5),
+    borderRadius: wp(2),
     zIndex: 200,
   },
   menuIcon: {
-    fontSize: width * 0.07,
+    fontSize: isTablet ? wp(5) : wp(7),
     color: '#000',
   },
   menu: {
     position: 'absolute',
-    top: height * 0.25,
-    right: width * 0.02,
-    width: width * 0.35,
-    height: height * 0.5,
-    backgroundColor: '#ebd9e2ff',
-    padding: width * 0.05,
-    borderRadius: width * 0.03,
+    top: isTablet ? hp(20) : hp(25),
+    right: wp(2),
+    width: isTablet ? wp(25) : wp(35),
+    height: isTablet ? hp(45) : hp(50),
+    backgroundColor: '#ebd9e2',
+    padding: wp(5),
+    borderRadius: wp(3),
     elevation: 10,
     zIndex: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   menuImage: {
-    height: height * 0.08,
+    height: isTablet ? hp(6) : hp(8),
     width: '100%',
     resizeMode: 'contain',
-    marginBottom: height * 0.015,
+    marginBottom: hp(1.5),
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -463,66 +478,79 @@ const style = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     width: '100%',
-    marginTop: height * 0.24,
-    paddingHorizontal: width * 0.03,
+    marginTop: isTablet ? hp(22) : hp(24),
+    paddingHorizontal: wp(3),
   },
   section: {
-    marginBottom: height * 0.02,
+    marginBottom: hp(2),
   },
   sectionTitle: {
-    fontSize: width * 0.04,
+    fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(3) : wp(4),
     fontWeight: 'bold',
-    marginBottom: height * 0.005,
-    marginLeft: width * 0.02,
+    marginBottom: hp(0.5),
+    marginLeft: wp(2),
     color: 'white',
   },
   placeholderItem: {
-    width: width * 0.22,
-    height: width * 0.22,
-    backgroundColor: '#ffffffff',
-    marginRight: width * 0.03,
+    width: isTablet ? wp(18) : isSmallDevice ? wp(20) : wp(22),
+    height: isTablet ? wp(18) : isSmallDevice ? wp(20) : wp(22),
+    backgroundColor: '#ffffff',
+    marginRight: wp(3),
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: width * 0.05,
+    borderRadius: isTablet ? wp(3) : wp(5),
+  },
+  plusIcon: {
+    fontSize: isTablet ? wp(5) : wp(7),
+    fontWeight: 'bold',
   },
   imageItem: {
     width: '100%',
     height: '100%',
-    borderRadius: width * 0.05,
+    borderRadius: isTablet ? wp(3) : wp(5),
     resizeMode: 'cover',
   },
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
-    width: width * 0.6,
-    padding: width * 0.05,
-    backgroundColor: '#000000ff',
-    borderRadius: width * 0.03,
+    width: isTablet ? wp(40) : wp(60),
+    padding: wp(5),
+    backgroundColor: '#000000',
+    borderRadius: wp(3),
     alignItems: 'center',
   },
   modalButton: {
     width: '100%',
-    padding: height * 0.015,
+    padding: hp(1.5),
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
+  textoModalButton: {
+    color: 'white',
+    fontSize: isSmallDevice ? wp(4) : isTablet ? wp(3) : wp(4.5),
+    fontWeight: '600',
+  },
   bottomButton: {
     alignSelf: 'center',
-    backgroundColor: '#000000ff',
-    padding: width * 0.03,
+    backgroundColor: '#000000',
+    padding: wp(3),
     borderRadius: 100,
-    marginTop: height * 0.04,
-    marginBottom: height * 0.1,
+    marginTop: hp(4),
+    marginBottom: hp(10),
     elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   bottomButtonImage: {
-    width: width * 0.3,
-    height: width * 0.15,
+    width: isTablet ? wp(20) : wp(30),
+    height: isTablet ? wp(10) : wp(15),
     resizeMode: 'contain',
   },
   modalImagenCompleta: {
@@ -535,13 +563,13 @@ const style = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   contenedorImagenGrande: {
-    width: width * 0.9,
-    height: height * 0.9,
-    borderRadius: width * 0.05,
+    width: isTablet ? wp(70) : wp(90),
+    height: isTablet ? hp(70) : hp(70),
+    borderRadius: wp(5),
     overflow: 'hidden',
     backgroundColor: '#1a1a1a',
     borderWidth: 2,
-    borderColor: '#333'
+    borderColor: '#333',
   },
   imagenGrande: {
     width: '100%',
@@ -549,17 +577,17 @@ const style = StyleSheet.create({
   },
   botonesImagen: {
     position: 'absolute',
-    bottom: height * 0.05,
+    bottom: hp(5),
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    paddingHorizontal: width * 0.1,
+    paddingHorizontal: wp(10),
   },
   botonAccion: {
-    paddingVertical: height * 0.02,
-    paddingHorizontal: width * 0.08,
-    borderRadius: width * 0.03,
-    minWidth: width * 0.35,
+    paddingVertical: hp(2),
+    paddingHorizontal: isTablet ? wp(6) : wp(8),
+    borderRadius: wp(3),
+    minWidth: isTablet ? wp(25) : wp(35),
     alignItems: 'center',
   },
   botonEliminar: {
@@ -570,28 +598,22 @@ const style = StyleSheet.create({
   },
   textoBoton: {
     color: 'white',
-    fontSize: width * 0.04,
+    fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(4),
     fontWeight: 'bold',
   },
-  textoModalButton: {
-    color: 'white',
-    fontSize: width * 0.045,
-    fontWeight: '600',
-  },
-  // Nuevo estilo para mensaje simple gris te amo
   mensajeContainer: {
     position: 'absolute',
     top: '45%',
-    left: '15%',
-    right: '15%',
+    alignSelf: 'center',
     backgroundColor: '#000000dd',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
+    paddingVertical: hp(2),
+    paddingHorizontal: wp(8),
+    borderRadius: wp(3),
+    maxWidth: wp(70),
   },
   mensajeTexto: {
     color: 'white',
-    fontSize: 16,
+    fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(4),
     textAlign: 'center',
   },
 });

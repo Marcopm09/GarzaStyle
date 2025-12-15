@@ -6,8 +6,10 @@ import {
   Animated,
   Dimensions,
   Image,
+  Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -22,6 +24,11 @@ const { width, height } = Dimensions.get('window');
 
 const wp = (percentage: number) => (width * percentage) / 100;
 const hp = (percentage: number) => (height * percentage) / 100;
+
+// Detección de tamaño de dispositivo
+const isSmallDevice = width < 360;
+const isMediumDevice = width >= 360 && width < 400;
+const isTablet = width >= 768;
 
 interface Conjunto {
   id: string;
@@ -157,6 +164,8 @@ export default function GuardadosScreen() {
 
   return (
     <View style={style.container}>
+      <StatusBar hidden={true} />
+      
       {/* Botón menú */}
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
@@ -355,28 +364,28 @@ export default function GuardadosScreen() {
                   </View>
                 </View>
 
-                {/* Botón eliminar */}
-                <TouchableOpacity 
-                  style={style.deleteButtonContainer}
-                  onPress={() => eliminarConjunto(item.id)}
-                >
-                  <Image 
-                    source={require('@/assets/images/Borrar.png')} 
-                    style={style.deleteButton} 
-                  />
-                </TouchableOpacity>
+                {/* Botones de acción */}
+                <View style={style.botonesAccion}>
+                  <TouchableOpacity 
+                    style={style.deleteButtonContainer}
+                    onPress={() => eliminarConjunto(item.id)}
+                  >
+                    <Image 
+                      source={require('@/assets/images/Borrar.png')} 
+                      style={style.deleteButton} 
+                    />
+                  </TouchableOpacity>
 
-                {/* Botón compartir */}
-                <TouchableOpacity 
-                  style={style.shareButtonContainer}
-                  onPress={() => compartirConjunto(item.id)}
-                >
-                  <Image 
-                    source={require('@/assets/images/compa.png')} 
-                    style={style.shareButton} 
-                  />
-                </TouchableOpacity>
-
+                  <TouchableOpacity 
+                    style={style.shareButtonContainer}
+                    onPress={() => compartirConjunto(item.id)}
+                  >
+                    <Image 
+                      source={require('@/assets/images/compa.png')} 
+                      style={style.shareButton} 
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
@@ -394,63 +403,66 @@ export default function GuardadosScreen() {
 const style = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000ff',
+    backgroundColor: '#000000',
   },
   subtitle: {
-    fontSize: 20,
+    fontSize: isSmallDevice ? wp(4.5) : isTablet ? wp(3.5) : wp(5),
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 10,
     position: 'absolute',
-    top: 120,
-    left: 30,
+    top: isTablet ? hp(16) : hp(15),
+    left: wp(8),
   },
   GarzaLogo: {
-    height: 150,
-    width: '60%',
-    bottom: 630,
-    left: 20,
+    height: isTablet ? hp(12) : hp(18),
+    width: isTablet ? wp(40) : wp(60),
+    top: isTablet ? hp(1) : hp(-1),
+    left: wp(5),
     position: 'absolute',
     resizeMode: 'contain',
   },
   horaTexto: {
-    fontSize: 18,
+    fontSize: isSmallDevice ? wp(4) : isTablet ? wp(3) : wp(4.5),
     fontWeight: 'bold',
     color: '#e76ba7ff',
     position: 'absolute',
-    top: 40,
-    left: 260,
+    top: Platform.OS === 'ios' ? hp(6) : hp(5),
+    right: wp(8),
   },
   menuButton: {
     position: 'absolute',
-    top: 90,
-    right: 20,
+    top: isTablet ? hp(12) : hp(11),
+    right: wp(5),
     zIndex: 100,
     backgroundColor: '#eee',
-    padding: 10,
-    borderRadius: 5,
+    padding: isTablet ? wp(1.5) : wp(2.5),
+    borderRadius: wp(1.5),
   },
   menuIcon: {
-    fontSize: 28,
+    fontSize: isTablet ? wp(5) : wp(7),
     color: '#000000',
   },
   menu: {
     position: 'absolute',
-    top: height * 0.25,
-    right: width * 0.02,
-    width: width * 0.35,
-    height: height * 0.5,
-    backgroundColor: '#ebd9e2ff',
-    padding: width * 0.05,
-    borderRadius: width * 0.03,
+    top: hp(20),
+    right: wp(2),
+    width: isTablet ? wp(25) : wp(35),
+    height: isTablet ? hp(45) : hp(50),
+    backgroundColor: '#ebd9e2',
+    padding: wp(5),
+    borderRadius: wp(3),
     elevation: 10,
     zIndex: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
   menuImage: {
-    height: height * 0.08,
+    height: isTablet ? hp(6) : hp(8),
     width: '100%',
     resizeMode: 'contain',
-    marginBottom: height * 0.015,
+    marginBottom: hp(1.5),
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -459,7 +471,7 @@ const style = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    marginTop: hp(22),
+    marginTop: isTablet ? hp(20) : hp(22),
   },
   scrollContent: {
     paddingBottom: hp(5),
@@ -473,56 +485,57 @@ const style = StyleSheet.create({
   },
   conjuntoCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 15,
+    borderRadius: wp(4),
     padding: wp(3),
     margin: wp(2.5),
-    width: wp(80),
+    width: isTablet ? wp(70) : wp(85),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
   },
-headerContainer: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-
-  borderBottomWidth: 1,
-  borderBottomColor: '#e0e0e0',
-},
-headerLeft: {
-  flex: 1,
-},
-headerRight: {
-  justifyContent: 'center',
-  alignItems: 'flex-end',
-},
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingBottom: hp(1),
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    marginBottom: hp(1.5),
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerRight: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
   nombreUsuarioText: {
-    fontSize: 16,
-    color: '#000000ff',
+    fontSize: isSmallDevice ? wp(3.8) : isTablet ? wp(2.5) : wp(4),
+    color: '#000000',
     fontWeight: '500',
-    marginBottom: 2,
+    marginBottom: hp(0.3),
   },
   nombreConjuntoText: {
-    fontSize: 10,
+    fontSize: isSmallDevice ? wp(2.5) : isTablet ? wp(1.8) : wp(2.8),
     color: '#fe8cc3',
     fontWeight: 'bold',
   },
   nombreConjuntoInput: {
-    fontSize: 10,
+    fontSize: isSmallDevice ? wp(2.5) : isTablet ? wp(1.8) : wp(2.8),
     color: '#000',
     fontWeight: 'bold',
     borderBottomWidth: 1,
     borderBottomColor: '#e76ba7ff',
-    paddingVertical: 2,
+    paddingVertical: hp(0.3),
   },
   fechaText: {
-  fontSize: 11,
-  color: '#999',
-  fontWeight: '500',
-  textAlign: 'right',
-},
+    fontSize: isSmallDevice ? wp(2.8) : isTablet ? wp(2) : wp(3),
+    color: '#999',
+    fontWeight: '500',
+    textAlign: 'right',
+  },
   prendasContainer: {
     flexDirection: 'column',
     gap: hp(0.8),
@@ -532,11 +545,11 @@ headerRight: {
     height: hp(8),
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#ffffffff',
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ffffffff',
+    borderColor: '#ffffff',
   },
   prendaImage: {
     width: '100%',
@@ -553,27 +566,30 @@ headerRight: {
   },
   emptyText: {
     color: '#ccc',
-    fontSize: 18,
+    fontSize: isTablet ? wp(3) : wp(4.5),
     fontWeight: 'bold',
   },
+  botonesAccion: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: hp(2),
+    paddingHorizontal: wp(2),
+  },
   deleteButtonContainer: {
-    position: 'absolute',
-    top: 260,
-    left: 20,
+    padding: wp(2),
   },
   deleteButton: {
-    width: 50,
-    height: 50,
+    width: isTablet ? wp(8) : wp(12),
+    height: isTablet ? wp(8) : wp(12),
     resizeMode: 'contain',
   },
   shareButtonContainer: {
-    position: 'absolute',
-    top: 260,
-    right: 20,
+    padding: wp(2),
   },
   shareButton: {
-    width: 52,
-    height: 52,
+    width: isTablet ? wp(8) : wp(13),
+    height: isTablet ? wp(8) : wp(13),
     resizeMode: 'contain',
   },
   emptyContainer: {
@@ -584,14 +600,14 @@ headerRight: {
   },
   emptyListText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: isSmallDevice ? wp(4.5) : isTablet ? wp(3) : wp(5),
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: hp(1),
     textAlign: 'center',
   },
   emptyListSubtext: {
     color: '#999',
-    fontSize: 14,
+    fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(3.8),
     textAlign: 'center',
   },
 });
