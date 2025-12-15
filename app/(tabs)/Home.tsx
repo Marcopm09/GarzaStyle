@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query, Timestamp, where } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   FlatList,
@@ -32,6 +33,12 @@ export default function HoraLocalScreen() {
   const hora = useHora();
   const [nombreUsuario, setNombreUsuario] = useState<string>('');
   const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ [key: string]: string[] }>({});
+  const [indicesVisibles, setIndicesVisibles] = useState<{ [key: string]: number }>({
+    'Accesorios': 0,
+    'Camisas / Playeras': 0,
+    'Pantalones / Shorts / Faldas': 0,
+    'Tenis / Zapatos': 0,
+  });
   const usuarioID = 'usuario1';
 
   const secciones = [
@@ -104,9 +111,47 @@ export default function HoraLocalScreen() {
 
   const obtenerTamanoImagen = (seccion: string) => {
     if (seccion === 'Camisas / Playeras') {
-      return containerSize * 0.70; // el tamaño del apartado camisas
+      return containerSize * 0.70;
     }
     return containerSize;
+  };
+
+  const guardarConjunto = async () => {
+    try {
+      const prendas: { [key: string]: string | null } = {};
+      
+      secciones.forEach((seccion) => {
+        const indice = indicesVisibles[seccion];
+        const imagenes = imagenesPorSeccion[seccion];
+        
+        let nombreCorto = '';
+        if (seccion === 'Accesorios') nombreCorto = 'accesorios';
+        else if (seccion === 'Camisas / Playeras') nombreCorto = 'camisa';
+        else if (seccion === 'Pantalones / Shorts / Faldas') nombreCorto = 'pantalon';
+        else if (seccion === 'Tenis / Zapatos') nombreCorto = 'zapatos';
+        
+        prendas[nombreCorto] = imagenes && imagenes[indice] ? imagenes[indice] : null;
+      });
+
+      const tienePrendas = Object.values(prendas).some(url => url !== null);
+      
+      if (!tienePrendas) {
+        Alert.alert('Error', 'No hay prendas para guardar');
+        return;
+      }
+
+      await addDoc(collection(db, 'Conjuntos'), {
+        usuarioID: usuarioID,
+        fecha: Timestamp.now(),
+        prendas: prendas,
+      });
+
+      Alert.alert('¡Éxito!', 'Conjunto guardado correctamente');
+      
+    } catch (error) {
+      console.error('Error guardando conjunto:', error);
+      Alert.alert('Error', 'No se pudo guardar el conjunto');
+    }
   };
 
   return (
@@ -127,7 +172,6 @@ export default function HoraLocalScreen() {
           const imageSize = obtenerTamanoImagen(seccion);
           
           return (
-            // Contenedor externo (con marco)
             <View key={idx} style={[style.outerContainer, { width: containerSize, height: containerSize }]}>
               <FlatList
                 data={imagenesPorSeccion[seccion] && imagenesPorSeccion[seccion].length > 0 
@@ -140,9 +184,16 @@ export default function HoraLocalScreen() {
                 snapToAlignment="start"
                 decelerationRate="fast"
                 contentContainerStyle={{ paddingRight: 0 }}
+                onMomentumScrollEnd={(event) => {
+                  const scrollPosition = event.nativeEvent.contentOffset.x;
+                  const index = Math.round(scrollPosition / containerSize);
+                  setIndicesVisibles(prev => ({
+                    ...prev,
+                    [seccion]: index
+                  }));
+                }}
                 renderItem={({ item }) =>
                   item ? (
-                    // Contenedor interno (sin marco, solo centra)
                     <View style={[style.innerContainer, { width: containerSize, height: containerSize }]}>
                       <Image
                         source={{ uri: item }}
@@ -226,7 +277,7 @@ export default function HoraLocalScreen() {
           <Image source={require('@/assets/images/compartir.png')} style={style.menuImageRedes} />
         </TouchableOpacity>
         
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity activeOpacity={0.7} onPress={guardarConjunto}>
           <Image source={require('@/assets/images/corazon.png')} style={style.menuImageRedes} />
         </TouchableOpacity>
         
@@ -276,7 +327,6 @@ const style = StyleSheet.create({
     marginTop: isTablet ? hp(20) : isSmallDevice ? hp(20) : hp(10),
     marginLeft: isTablet ? wp(25) : wp(30),
   },
-  // Contenedor externo con marco
   outerContainer: {
     marginBottom: hp(0.2),
     borderRadius: 8,
@@ -284,7 +334,6 @@ const style = StyleSheet.create({
     borderColor: '#ccc',
     overflow: 'hidden',
   },
-  // Contenedor interno sin marco, solo centra
   innerContainer: {
     justifyContent: 'center',
     alignItems: 'center',

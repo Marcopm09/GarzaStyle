@@ -1,130 +1,321 @@
-
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Animated, Dimensions, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { db } from '../../firebaseConfig';
 import { useHora } from '../Hora';
-
 
 const screenWidth = Dimensions.get('window').width;
 const { width, height } = Dimensions.get('window');
 
+const wp = (percentage: number) => (width * percentage) / 100;
+const hp = (percentage: number) => (height * percentage) / 100;
 
-export default function HoraLocalScreen() {
-    const hora = useHora();
-    const [menuVisible, setMenuVisible] = useState(false);
-    const translateX = useRef(new Animated.Value(screenWidth)).current;
-
- 
-
-    const toggleMenu = () => {
-        if (menuVisible) {
-            Animated.timing(translateX, {
-                toValue: screenWidth,
-                duration: 300,
-                useNativeDriver: true,
-            }).start(() => { setTimeout(() => { setMenuVisible(false); }, 10); });
-        } else {
-            setMenuVisible(true);
-            Animated.timing(translateX, {
-                toValue: screenWidth * 0.4,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        }
-    };
-    return (
-
-        <View style={style.container}>
-
-
-            {/* Botón menú */}
-            <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
-                <Text style={style.menuIcon}>☰</Text>
-            </TouchableOpacity>
-
-            {/* Menú deslizable */}
-            {menuVisible && (
-                <Pressable style={style.overlay} onPress={toggleMenu}>
-                    <Animated.View
-                        style={[
-                            style.menu,
-                            {
-                                transform: [
-                                    {
-                                        translateX: translateX.interpolate({
-                                            inputRange: [screenWidth * 0.4, screenWidth],
-                                            outputRange: [0, screenWidth * 0.6],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                        onStartShouldSetResponder={() => true}
-                    > 
-                    <TouchableOpacity onPress={() => router.push('/Home')}>
-                            <Image
-                                source={require('@/assets/images/House.png')}
-                                style={style.menuImage}
-                            /></TouchableOpacity>
-                        
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image
-                                source={require('@/assets/images/Gancho.png')}
-                                style={style.menuImage}
-                            /></TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image
-                                source={require('@/assets/images/Camara.png')}
-                                style={style.menuImage}
-                            /></TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image
-                                source={require('@/assets/images/Camisa.png')}
-                                style={style.menuImage}
-                            /></TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => console.log('aun no')}>
-                            <Image
-                                source={require('@/assets/images/Pantalon.png')}
-                                style={style.menuImage}
-                            />
-                        </TouchableOpacity>
-
-
-                    </Animated.View>
-                </Pressable>
-            )}
-
-            <Text style={style.horaTexto}>{hora}</Text>
-            <Text style={style.subtitle}>TUS GUARDADOS</Text>
-            <Image
-                source={require('@/assets/images/Logo_GarzaStyle.png')}
-                style={style.GarzaLogo}
-            />
-        </View>
-    );
+interface Conjunto {
+  id: string;
+  prendas: {
+    accesorios: string | null;
+    camisa: string | null;
+    pantalon: string | null;
+    zapatos: string | null;
+  };
+  fecha: any;
 }
 
+export default function GuardadosScreen() {
+  const hora = useHora();
+  const [menuVisible, setMenuVisible] = useState(false);
+  const translateX = useRef(new Animated.Value(screenWidth)).current;
+  const [conjuntos, setConjuntos] = useState<Conjunto[]>([]);
+  const usuarioID = 'usuario1';
+
+  const toggleMenu = () => {
+    if (menuVisible) {
+      Animated.timing(translateX, {
+        toValue: screenWidth,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => { 
+        setTimeout(() => { 
+          setMenuVisible(false); 
+        }, 10); 
+      });
+    } else {
+      setMenuVisible(true);
+      Animated.timing(translateX, {
+        toValue: screenWidth * 0.4,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  useEffect(() => {
+    cargarConjuntos();
+  }, []);
+
+  const cargarConjuntos = async () => {
+    try {
+      const q = query(
+        collection(db, 'Conjuntos'),
+        where('usuarioID', '==', usuarioID)
+      );
+      const snapshot = await getDocs(q);
+      const conjuntosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Conjunto[];
+      
+      // Ordenar por fecha más reciente
+      conjuntosData.sort((a, b) => b.fecha.seconds - a.fecha.seconds);
+      
+      setConjuntos(conjuntosData);
+    } catch (error) {
+      console.error('Error cargando conjuntos:', error);
+      Alert.alert('Error', 'No se pudieron cargar los conjuntos guardados');
+    }
+  };
+
+  const eliminarConjunto = async (id: string) => {
+    Alert.alert(
+      'Eliminar conjunto',
+      '¿Estás seguro de que quieres eliminar este conjunto?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'Conjuntos', id));
+              setConjuntos(prev => prev.filter(c => c.id !== id));
+              Alert.alert('Éxito', 'Conjunto eliminado correctamente');
+            } catch (error) {
+              console.error('Error eliminando conjunto:', error);
+              Alert.alert('Error', 'No se pudo eliminar el conjunto');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const compartirConjunto = (id: string) => {
+    Alert.alert('Compartir', 'Funcionalidad de compartir próximamente');
+    // Aquí puedes implementar la lógica de compartir
+  };
+
+  return (
+    <View style={style.container}>
+      {/* Botón menú */}
+      <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
+        <Text style={style.menuIcon}>☰</Text>
+      </TouchableOpacity>
+
+      {/* Menú deslizable */}
+      {menuVisible && (
+        <Pressable style={style.overlay} onPress={toggleMenu}>
+          <Animated.View
+            style={[
+              style.menu,
+              {
+                transform: [
+                  {
+                    translateX: translateX.interpolate({
+                      inputRange: [screenWidth * 0.4, screenWidth],
+                      outputRange: [0, screenWidth * 0.6],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            onStartShouldSetResponder={() => true}
+          > 
+            <TouchableOpacity 
+              onPress={() => {
+                toggleMenu();
+                setTimeout(() => router.push('/Home'), 300);
+              }}
+            >
+              <Image
+                source={require('@/assets/images/House.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => {
+                toggleMenu();
+                setTimeout(() => router.push('/Armario'), 300);
+              }}
+            >
+              <Image
+                source={require('@/assets/images/Gancho.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => console.log('aun no')}>
+              <Image
+                source={require('@/assets/images/Camara.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => console.log('aun no')}>
+              <Image
+                source={require('@/assets/images/Camisa.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => console.log('aun no')}>
+              <Image
+                source={require('@/assets/images/Pantalon.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+        </Pressable>
+      )}
+
+      <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.subtitle}>TUS GUARDADOS</Text>
+      <Image
+        source={require('@/assets/images/Logo_GarzaStyle.png')}
+        style={style.GarzaLogo}
+      />
+
+      {/* ScrollView para permitir scroll completo */}
+      <ScrollView 
+        style={style.scrollContainer}
+        contentContainerStyle={style.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {conjuntos.length > 0 ? (
+          <View style={style.gridContainer}>
+            {conjuntos.map((item) => (
+              <View key={item.id} style={style.conjuntoCard}>
+                {/* Contenedor de las 4 prendas en VERTICAL */}
+                <View style={style.prendasContainer}>
+                  {/* Accesorios */}
+                  <View style={style.prendaBox}>
+                    {item.prendas.accesorios ? (
+                      <Image 
+                        source={{ uri: item.prendas.accesorios }} 
+                        style={style.prendaImage}
+                      />
+                    ) : (
+                      <View style={style.emptyBox}>
+                        <Text style={style.emptyText}>-</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Camisa */}
+                  <View style={style.prendaBox}>
+                    {item.prendas.camisa ? (
+                      <Image 
+                        source={{ uri: item.prendas.camisa }} 
+                        style={style.prendaImage}
+                      />
+                    ) : (
+                      <View style={style.emptyBox}>
+                        <Text style={style.emptyText}>-</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Pantalón */}
+                  <View style={style.prendaBox}>
+                    {item.prendas.pantalon ? (
+                      <Image 
+                        source={{ uri: item.prendas.pantalon }} 
+                        style={style.prendaImage}
+                      />
+                    ) : (
+                      <View style={style.emptyBox}>
+                        <Text style={style.emptyText}>-</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Zapatos */}
+                  <View style={style.prendaBox}>
+                    {item.prendas.zapatos ? (
+                      <Image 
+                        source={{ uri: item.prendas.zapatos }} 
+                        style={style.prendaImage}
+                      />
+                    ) : (
+                      <View style={style.emptyBox}>
+                        <Text style={style.emptyText}>-</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Botón eliminar */}
+                <TouchableOpacity 
+                  style={style.deleteButtonContainer}
+                  onPress={() => eliminarConjunto(item.id)}
+                >
+                  <Image 
+                    source={require('@/assets/images/Borrar.png')} 
+                    style={style.deleteButton} 
+                  />
+                </TouchableOpacity>
+
+                {/* Botón compartir */}
+                <TouchableOpacity 
+                  style={style.shareButtonContainer}
+                  onPress={() => compartirConjunto(item.id)}
+                >
+                  <Image 
+                    source={require('@/assets/images/compa.png')} 
+                    style={style.shareButton} 
+                  />
+                </TouchableOpacity>
+
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={style.emptyContainer}>
+            <Text style={style.emptyListText}>No tienes conjuntos guardados</Text>
+            <Text style={style.emptyListSubtext}>Guarda tus outfits favoritos desde el Home</Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
 
 const style = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#000000ff',
-    },
-    subtitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#ffffff',
-        marginBottom: 10,
-        position: 'absolute',
-        top: 120,
-        left: 30,
-    },
-    //Imagenes
+  container: {
+    flex: 1,
+    backgroundColor: '#000000ff',
+  },
+  subtitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 10,
+    position: 'absolute',
+    top: 120,
+    left: 30,
+  },
   GarzaLogo: {
     height: 150,
     width: '60%',
@@ -133,32 +324,27 @@ const style = StyleSheet.create({
     position: 'absolute',
     resizeMode: 'contain',
   },
-
-    //Para la hora
-    horaTexto: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#e76ba7ff',
-        position: 'absolute',
-        top: 40,
-        left: 260,
-    },
-
-
-    //Para el menu 
-    menuButton: {
-        position: 'absolute',
-        top: 90,
-        right: 20,
-        zIndex: 100,
-        backgroundColor: '#eee',
-        padding: 10,
-        borderRadius: 5,
-    },
-    menuIcon: {
-        fontSize: 28,
-        color: '#000000',
-    },
+  horaTexto: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e76ba7ff',
+    position: 'absolute',
+    top: 40,
+    left: 260,
+  },
+  menuButton: {
+    position: 'absolute',
+    top: 90,
+    right: 20,
+    zIndex: 100,
+    backgroundColor: '#eee',
+    padding: 10,
+    borderRadius: 5,
+  },
+  menuIcon: {
+    fontSize: 28,
+    color: '#000000',
+  },
   menu: {
     position: 'absolute',
     top: height * 0.25,
@@ -180,7 +366,103 @@ const style = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0)',
+    zIndex: 200,
   },
-
-
+  scrollContainer: {
+    flex: 1,
+    marginTop: hp(22),
+  },
+  scrollContent: {
+    paddingBottom: hp(5),
+    alignItems: 'center',
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    paddingHorizontal: wp(2),
+  },
+  conjuntoCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
+    padding: wp(3),
+    margin: wp(2.5),
+    width: wp(80),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  prendasContainer: {
+    flexDirection: 'column',
+    gap: hp(0.8),
+  },
+  prendaBox: {
+    width: '100%',
+    height: hp(8),
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#ffffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ffffffff',
+  },
+  prendaImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  emptyBox: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  emptyText: {
+    color: '#ccc',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  deleteButtonContainer: {
+    position: 'absolute',
+    top: 220,
+    left: 20,
+  },
+  deleteButton: {
+    width: 50,
+    height: 50,
+    resizeMode: 'contain',
+  },
+  shareButtonContainer: {
+    position: 'absolute',
+    top: 220,
+    right: 20,
+  },
+  shareButton: {
+    width: 52,
+    height: 52,
+    resizeMode: 'contain',
+  },
+  emptyContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: hp(10),
+    paddingHorizontal: wp(10),
+  },
+  emptyListText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptyListSubtext: {
+    color: '#999',
+    fontSize: 14,
+    textAlign: 'center',
+  },
 });
