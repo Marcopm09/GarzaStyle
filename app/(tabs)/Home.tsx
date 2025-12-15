@@ -144,6 +144,7 @@ export default function HoraLocalScreen() {
         usuarioID: usuarioID,
         fecha: Timestamp.now(),
         prendas: prendas,
+        nombre: 'Sin nombre',
       });
 
       Alert.alert('¡Éxito!', 'Conjunto guardado correctamente');

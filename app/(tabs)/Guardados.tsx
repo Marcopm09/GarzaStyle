@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -31,6 +32,7 @@ interface Conjunto {
     zapatos: string | null;
   };
   fecha: any;
+  nombre?: string;
 }
 
 export default function GuardadosScreen() {
@@ -38,6 +40,8 @@ export default function GuardadosScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const translateX = useRef(new Animated.Value(screenWidth)).current;
   const [conjuntos, setConjuntos] = useState<Conjunto[]>([]);
+  const [nombreUsuario, setNombreUsuario] = useState<string>('');
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const usuarioID = 'usuario1';
 
   const toggleMenu = () => {
@@ -62,8 +66,21 @@ export default function GuardadosScreen() {
   };
 
   useEffect(() => {
+    cargarUsuario();
     cargarConjuntos();
   }, []);
+
+  const cargarUsuario = async () => {
+    try {
+      const docRef = doc(db, 'Usuarios', usuarioID);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setNombreUsuario(docSnap.data().nombre);
+      }
+    } catch (error) {
+      console.error('Error cargando usuario:', error);
+    }
+  };
 
   const cargarConjuntos = async () => {
     try {
@@ -84,6 +101,29 @@ export default function GuardadosScreen() {
     } catch (error) {
       console.error('Error cargando conjuntos:', error);
       Alert.alert('Error', 'No se pudieron cargar los conjuntos guardados');
+    }
+  };
+
+  const actualizarNombreConjunto = async (id: string, nuevoNombre: string) => {
+    try {
+      const docRef = doc(db, 'Conjuntos', id);
+      await updateDoc(docRef, {
+        nombre: nuevoNombre
+      });
+      
+      // Actualizar estado local
+      setConjuntos(prev => 
+        prev.map(conjunto => 
+          conjunto.id === id 
+            ? { ...conjunto, nombre: nuevoNombre }
+            : conjunto
+        )
+      );
+      
+      setEditandoId(null);
+    } catch (error) {
+      console.error('Error actualizando nombre:', error);
+      Alert.alert('Error', 'No se pudo actualizar el nombre');
     }
   };
 
@@ -113,7 +153,6 @@ export default function GuardadosScreen() {
 
   const compartirConjunto = (id: string) => {
     Alert.alert('Compartir', 'Funcionalidad de compartir próximamente');
-    // Aquí puedes implementar la lógica de compartir
   };
 
   return (
@@ -207,6 +246,56 @@ export default function GuardadosScreen() {
           <View style={style.gridContainer}>
             {conjuntos.map((item) => (
               <View key={item.id} style={style.conjuntoCard}>
+                {/* Encabezado con nombre de usuario, conjunto y fecha */}
+                <View style={style.headerContainer}>
+                  <View style={style.headerLeft}>
+                    <Text style={style.nombreUsuarioText}>{nombreUsuario}</Text>
+                    
+                    {editandoId === item.id ? (
+                      <TextInput
+                        style={style.nombreConjuntoInput}
+                        value={item.nombre || ''}
+                        placeholder="Sin Nombre"
+                        placeholderTextColor="#ccc"
+                        onChangeText={(text) => {
+                          if (text.length <= 25) {
+                            setConjuntos(prev =>
+                              prev.map(c =>
+                                c.id === item.id ? { ...c, nombre: text } : c
+                              )
+                            );
+                          }
+                        }}
+                        onBlur={() => {
+                          const nombreFinal = item.nombre && item.nombre.trim() !== '' 
+                            ? item.nombre 
+                            : 'Sin Nombre';
+                          actualizarNombreConjunto(item.id, nombreFinal);
+                        }}
+                        autoFocus
+                        selectTextOnFocus
+                        maxLength={25}
+                      />
+                    ) : (
+                      <TouchableOpacity onPress={() => setEditandoId(item.id)}>
+                        <Text style={style.nombreConjuntoText}>
+                          {item.nombre || 'Sin Nombre'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  
+                  <View style={style.headerRight}>
+                    <Text style={style.fechaText}>
+                      {new Date(item.fecha.seconds * 1000).toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </Text>
+                  </View>
+                </View>
+
                 {/* Contenedor de las 4 prendas en VERTICAL */}
                 <View style={style.prendasContainer}>
                   {/* Accesorios */}
@@ -394,6 +483,46 @@ const style = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
+headerContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+
+  borderBottomWidth: 1,
+  borderBottomColor: '#e0e0e0',
+},
+headerLeft: {
+  flex: 1,
+},
+headerRight: {
+  justifyContent: 'center',
+  alignItems: 'flex-end',
+},
+  nombreUsuarioText: {
+    fontSize: 16,
+    color: '#000000ff',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  nombreConjuntoText: {
+    fontSize: 10,
+    color: '#fe8cc3',
+    fontWeight: 'bold',
+  },
+  nombreConjuntoInput: {
+    fontSize: 10,
+    color: '#000',
+    fontWeight: 'bold',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e76ba7ff',
+    paddingVertical: 2,
+  },
+  fechaText: {
+  fontSize: 11,
+  color: '#999',
+  fontWeight: '500',
+  textAlign: 'right',
+},
   prendasContainer: {
     flexDirection: 'column',
     gap: hp(0.8),
@@ -429,7 +558,7 @@ const style = StyleSheet.create({
   },
   deleteButtonContainer: {
     position: 'absolute',
-    top: 220,
+    top: 260,
     left: 20,
   },
   deleteButton: {
@@ -439,7 +568,7 @@ const style = StyleSheet.create({
   },
   shareButtonContainer: {
     position: 'absolute',
-    top: 220,
+    top: 260,
     right: 20,
   },
   shareButton: {

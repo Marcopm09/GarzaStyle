@@ -261,7 +261,7 @@ export default function HoraLocalScreen() {
               <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/Guardados')}>
               <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
             </TouchableOpacity>
           </View>
