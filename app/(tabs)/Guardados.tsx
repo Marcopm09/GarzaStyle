@@ -9,7 +9,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -24,8 +23,6 @@ const { width, height } = Dimensions.get('window');
 
 const wp = (percentage: number) => (width * percentage) / 100;
 const hp = (percentage: number) => (height * percentage) / 100;
-
-// Detección de tamaño de dispositivo
 const isSmallDevice = width < 360;
 const isMediumDevice = width >= 360 && width < 400;
 const isTablet = width >= 768;
@@ -164,8 +161,6 @@ export default function GuardadosScreen() {
 
   return (
     <View style={style.container}>
-      <StatusBar hidden={true} />
-      
       {/* Botón menú */}
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
@@ -364,28 +359,28 @@ export default function GuardadosScreen() {
                   </View>
                 </View>
 
-                {/* Botones de acción */}
-                <View style={style.botonesAccion}>
-                  <TouchableOpacity 
-                    style={style.deleteButtonContainer}
-                    onPress={() => eliminarConjunto(item.id)}
-                  >
-                    <Image 
-                      source={require('@/assets/images/Borrar.png')} 
-                      style={style.deleteButton} 
-                    />
-                  </TouchableOpacity>
+                {/* Botón eliminar */}
+                <TouchableOpacity 
+                  style={style.deleteButtonContainer}
+                  onPress={() => eliminarConjunto(item.id)}
+                >
+                  <Image 
+                    source={require('@/assets/images/Borrar.png')} 
+                    style={style.deleteButton} 
+                  />
+                </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={style.shareButtonContainer}
-                    onPress={() => compartirConjunto(item.id)}
-                  >
-                    <Image 
-                      source={require('@/assets/images/compa.png')} 
-                      style={style.shareButton} 
-                    />
-                  </TouchableOpacity>
-                </View>
+                {/* Botón compartir */}
+                <TouchableOpacity 
+                  style={style.shareButtonContainer}
+                  onPress={() => compartirConjunto(item.id)}
+                >
+                  <Image 
+                    source={require('@/assets/images/compa.png')} 
+                    style={style.shareButton} 
+                  />
+                </TouchableOpacity>
+
               </View>
             ))}
           </View>
@@ -486,7 +481,8 @@ const style = StyleSheet.create({
   conjuntoCard: {
     backgroundColor: '#ffffff',
     borderRadius: wp(4),
-    padding: wp(3),
+    paddingVertical: wp(2),
+    paddingHorizontal: wp(3),
     margin: wp(2.5),
     width: isTablet ? wp(70) : wp(85),
     shadowColor: '#000',
@@ -499,10 +495,10 @@ const style = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingBottom: hp(1),
+    paddingBottom: hp(0.5),
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    marginBottom: hp(1.5),
+    marginBottom: hp(1),
   },
   headerLeft: {
     flex: 1,
@@ -538,12 +534,12 @@ const style = StyleSheet.create({
   },
   prendasContainer: {
     flexDirection: 'column',
-    gap: hp(0.8),
+    gap: hp(0.5),
   },
   prendaBox: {
     width: '100%',
-    height: hp(8),
-    borderRadius: 10,
+    height: isTablet ? hp(8) : hp(8),
+    borderRadius: wp(2.5),
     overflow: 'hidden',
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -562,22 +558,17 @@ const style = StyleSheet.create({
     backgroundColor: '#f8f8f8',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: wp(2.5),
   },
   emptyText: {
     color: '#ccc',
     fontSize: isTablet ? wp(3) : wp(4.5),
     fontWeight: 'bold',
   },
-  botonesAccion: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: hp(2),
-    paddingHorizontal: wp(2),
-  },
   deleteButtonContainer: {
-    padding: wp(2),
+    position: 'absolute',
+    bottom: hp(1.5),
+    left: wp(9),
   },
   deleteButton: {
     width: isTablet ? wp(8) : wp(12),
@@ -585,11 +576,13 @@ const style = StyleSheet.create({
     resizeMode: 'contain',
   },
   shareButtonContainer: {
-    padding: wp(2),
+    position: 'absolute',
+    bottom: hp(1.5),
+    right: wp(9),
   },
   shareButton: {
-    width: isTablet ? wp(8) : wp(13),
-    height: isTablet ? wp(8) : wp(13),
+    width: isTablet ? wp(8) : wp(12),
+    height: isTablet ? wp(8) : wp(12),
     resizeMode: 'contain',
   },
   emptyContainer: {
