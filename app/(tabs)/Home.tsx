@@ -30,20 +30,25 @@ const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
   const translateX = useRef(new Animated.Value(screenWidth)).current;
+  const translateXAccesorios = useRef(new Animated.Value(-wp(50))).current;
   const [menuVisible, setMenuVisible] = useState(false);
+  const [accesoriosVisible, setAccesoriosVisible] = useState(false);
   const hora = useHora();
   const [nombreUsuario, setNombreUsuario] = useState<string>('');
   const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ [key: string]: string[] }>({});
+  const [imagenesAccesorios, setImagenesAccesorios] = useState<string[]>([]);
   const [indicesVisibles, setIndicesVisibles] = useState<{ [key: string]: number }>({
-    'Accesorios': 0,
     'Camisas / Playeras': 0,
     'Pantalones / Shorts / Faldas': 0,
     'Tenis / Zapatos': 0,
   });
+  
+  // Referencias para los FlatList
+  const flatListRefs = useRef<{ [key: string]: FlatList<any> | null }>({});
+  
   const usuarioID = 'usuario1';
 
   const secciones = [
-    'Accesorios',
     'Camisas / Playeras',
     'Pantalones / Shorts / Faldas',
     'Tenis / Zapatos',
@@ -70,6 +75,25 @@ export default function HoraLocalScreen() {
     }
   };
 
+  const toggleAccesorios = () => {
+    if (accesoriosVisible) {
+      Animated.timing(translateXAccesorios, {
+        toValue: -wp(50),
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setAccesoriosVisible(false);
+      });
+    } else {
+      setAccesoriosVisible(true);
+      Animated.timing(translateXAccesorios, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
   useEffect(() => {
     const cargarUsuario = async () => {
       try {
@@ -89,6 +113,8 @@ export default function HoraLocalScreen() {
     const cargarImagenes = async () => {
       try {
         const nuevasImagenes: { [key: string]: string[] } = {};
+        
+        // Cargar imágenes de las secciones principales
         await Promise.all(
           secciones.map(async (seccion) => {
             const q = query(
@@ -100,7 +126,18 @@ export default function HoraLocalScreen() {
             nuevasImagenes[seccion] = snapshot.docs.map(doc => doc.data().fotoURL || '');
           })
         );
+        
+        // Cargar imágenes de accesorios
+        const qAccesorios = query(
+          collection(db, 'Prendas'),
+          where('usuarioID', '==', usuarioID),
+          where('seccion', '==', 'Accesorios')
+        );
+        const snapshotAccesorios = await getDocs(qAccesorios);
+        const accesorios = snapshotAccesorios.docs.map(doc => doc.data().fotoURL || '');
+        
         setImagenesPorSeccion(nuevasImagenes);
+        setImagenesAccesorios(accesorios);
       } catch (error) {
         console.error('Error cargando imágenes:', JSON.stringify(error, null, 2));
       }
@@ -117,6 +154,44 @@ export default function HoraLocalScreen() {
     return containerSize;
   };
 
+  // Función para ir a la siguiente imagen
+  const siguienteImagen = (seccion: string) => {
+    const imagenes = imagenesPorSeccion[seccion];
+    if (!imagenes || imagenes.length === 0) return;
+    
+    const indiceActual = indicesVisibles[seccion];
+    const nuevoIndice = (indiceActual + 1) % imagenes.length;
+    
+    setIndicesVisibles(prev => ({
+      ...prev,
+      [seccion]: nuevoIndice
+    }));
+    
+    flatListRefs.current[seccion]?.scrollToIndex({
+      index: nuevoIndice,
+      animated: true
+    });
+  };
+
+  // Función para ir a la imagen anterior
+  const anteriorImagen = (seccion: string) => {
+    const imagenes = imagenesPorSeccion[seccion];
+    if (!imagenes || imagenes.length === 0) return;
+    
+    const indiceActual = indicesVisibles[seccion];
+    const nuevoIndice = indiceActual === 0 ? imagenes.length - 1 : indiceActual - 1;
+    
+    setIndicesVisibles(prev => ({
+      ...prev,
+      [seccion]: nuevoIndice
+    }));
+    
+    flatListRefs.current[seccion]?.scrollToIndex({
+      index: nuevoIndice,
+      animated: true
+    });
+  };
+
   const guardarConjunto = async () => {
     try {
       const prendas: { [key: string]: string | null } = {};
@@ -126,13 +201,14 @@ export default function HoraLocalScreen() {
         const imagenes = imagenesPorSeccion[seccion];
         
         let nombreCorto = '';
-        if (seccion === 'Accesorios') nombreCorto = 'accesorios';
-        else if (seccion === 'Camisas / Playeras') nombreCorto = 'camisa';
+        if (seccion === 'Camisas / Playeras') nombreCorto = 'camisa';
         else if (seccion === 'Pantalones / Shorts / Faldas') nombreCorto = 'pantalon';
         else if (seccion === 'Tenis / Zapatos') nombreCorto = 'zapatos';
         
         prendas[nombreCorto] = imagenes && imagenes[indice] ? imagenes[indice] : null;
       });
+
+      prendas['accesorios'] = null;
 
       const tienePrendas = Object.values(prendas).some(url => url !== null);
       
@@ -168,64 +244,167 @@ export default function HoraLocalScreen() {
       <Text style={style.subtitle}>¡Bienvenido {nombreUsuario}!</Text>
       <Text style={style.horaTexto}>{hora}</Text>
 
+      {/* Pestaña de Accesorios */}
+      <TouchableOpacity 
+        style={style.pestanaAccesorios}
+        onPress={toggleAccesorios}
+      >
+        <Text style={style.pestanaAccesoriosTexto}>Accesorios</Text>
+      </TouchableOpacity>
+
+      {/* Ventana flotante de Accesorios */}
+      {accesoriosVisible && (
+        <>
+          <Pressable 
+            style={style.overlayAccesorios} 
+            onPress={toggleAccesorios}
+          />
+          <Animated.View
+            style={[
+              style.ventanaAccesorios,
+              {
+                transform: [{ translateX: translateXAccesorios }]
+              }
+            ]}
+          >
+            <View style={style.headerAccesorios}>
+              <Text style={style.tituloAccesorios}>Accesorios</Text>
+              <TouchableOpacity onPress={toggleAccesorios}>
+                <Text style={style.cerrarAccesorios}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={style.scrollAccesorios}
+              contentContainerStyle={style.gridAccesorios}
+              showsVerticalScrollIndicator={false}
+            >
+              {imagenesAccesorios.length > 0 ? (
+                imagenesAccesorios.map((imagen, index) => (
+                  <TouchableOpacity 
+                    key={index}
+                    style={style.accesorioItem}
+                    activeOpacity={0.7}
+                  >
+                    <Image 
+                      source={{ uri: imagen }}
+                      style={style.accesorioImagen}
+                    />
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={style.sinAccesorios}>
+                  <Text style={style.sinAccesoriosTexto}>
+                    No hay accesorios disponibles
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </Animated.View>
+        </>
+      )}
+
       <ScrollView 
         style={style.carouselContainer}
+        contentContainerStyle={style.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {secciones.map((seccion, idx) => {
           const imageSize = obtenerTamanoImagen(seccion);
+          const tieneImagenes = imagenesPorSeccion[seccion] && imagenesPorSeccion[seccion].length > 0;
           
           return (
-            <View key={idx} style={[style.outerContainer, { width: containerSize, height: containerSize }]}>
-              <FlatList
-                data={imagenesPorSeccion[seccion] && imagenesPorSeccion[seccion].length > 0 
-                  ? imagenesPorSeccion[seccion] 
-                  : [null]}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                pagingEnabled={false}
-                snapToInterval={containerSize}
-                snapToAlignment="start"
-                decelerationRate="fast"
-                contentContainerStyle={{ paddingRight: 0 }}
-                onMomentumScrollEnd={(event) => {
-                  const scrollPosition = event.nativeEvent.contentOffset.x;
-                  const index = Math.round(scrollPosition / containerSize);
-                  setIndicesVisibles(prev => ({
-                    ...prev,
-                    [seccion]: index
-                  }));
-                }}
-                renderItem={({ item }) =>
-                  item ? (
-                    <View style={[style.innerContainer, { width: containerSize, height: containerSize }]}>
-                      <Image
-                        source={{ uri: item }}
+            <View key={idx} style={style.seccionWrapper}>
+              {/* Flecha Izquierda */}
+              {tieneImagenes && imagenesPorSeccion[seccion].length > 1 && (
+                <TouchableOpacity 
+                  style={style.flechaIzquierda}
+                  onPress={() => anteriorImagen(seccion)}
+                >
+                  <Image 
+                    source={require('@/assets/images/Flecha.png')} 
+                    style={style.flechaImagenIzquierda}
+                  />
+                </TouchableOpacity>
+              )}
+
+              {/* Contenedor de imagen */}
+              <View style={[style.outerContainer, { width: containerSize, height: containerSize }]}>
+                <FlatList
+                  ref={(ref) => { 
+                    if (ref) {
+                      flatListRefs.current[seccion] = ref;
+                    }
+                  }}
+                  data={tieneImagenes ? imagenesPorSeccion[seccion] : [null]}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  pagingEnabled={false}
+                  snapToInterval={containerSize}
+                  snapToAlignment="start"
+                  decelerationRate="fast"
+                  contentContainerStyle={{ paddingRight: 0 }}
+                  onMomentumScrollEnd={(event) => {
+                    const scrollPosition = event.nativeEvent.contentOffset.x;
+                    const index = Math.round(scrollPosition / containerSize);
+                    setIndicesVisibles(prev => ({
+                      ...prev,
+                      [seccion]: index
+                    }));
+                  }}
+                  onScrollToIndexFailed={(info) => {
+                    const wait = new Promise(resolve => setTimeout(resolve, 500));
+                    wait.then(() => {
+                      flatListRefs.current[seccion]?.scrollToIndex({ 
+                        index: info.index, 
+                        animated: true 
+                      });
+                    });
+                  }}
+                  renderItem={({ item }) =>
+                    item ? (
+                      <View style={[style.innerContainer, { width: containerSize, height: containerSize }]}>
+                        <Image
+                          source={{ uri: item }}
+                          style={[
+                            style.carouselImageSingle,
+                            { 
+                              width: imageSize,
+                              height: imageSize
+                            }
+                          ]}
+                        />
+                      </View>
+                    ) : (
+                      <View 
                         style={[
-                          style.carouselImageSingle,
+                          style.emptyBoxSingle,
                           { 
-                            width: imageSize,
-                            height: imageSize
+                            width: containerSize,
+                            height: containerSize
                           }
                         ]}
-                      />
-                    </View>
-                  ) : (
-                    <View 
-                      style={[
-                        style.emptyBoxSingle,
-                        { 
-                          width: containerSize,
-                          height: containerSize
-                        }
-                      ]}
-                    >
-                      <Text style={style.emptyText}>Sin imágenes</Text>
-                    </View>
-                  )
-                }
-                keyExtractor={(item, index) => `${seccion}-${index}`}
-              />
+                      >
+                        <Text style={style.emptyText}>Sin imágenes</Text>
+                      </View>
+                    )
+                  }
+                  keyExtractor={(item, index) => `${seccion}-${index}`}
+                />
+              </View>
+
+              {/* Flecha Derecha */}
+              {tieneImagenes && imagenesPorSeccion[seccion].length > 1 && (
+                <TouchableOpacity 
+                  style={style.flechaDerecha}
+                  onPress={() => siguienteImagen(seccion)}
+                >
+                  <Image 
+                    source={require('@/assets/images/Flecha.png')} 
+                    style={style.flechaImagenDerecha}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           );
         })}
@@ -325,14 +504,122 @@ const style = StyleSheet.create({
     top: Platform.OS === 'ios' ? hp(6) : hp(5),
     right: wp(5),
   },
+  pestanaAccesorios: {
+    position: 'absolute',
+    top: isTablet ? hp(20) : hp(18),
+    left: 0,
+    backgroundColor: '#e76ba7ff',
+    paddingVertical: hp(1.5),
+    paddingHorizontal: wp(4),
+    borderTopRightRadius: wp(3),
+    borderBottomRightRadius: wp(3),
+    zIndex: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  pestanaAccesoriosTexto: {
+    color: '#fff',
+    fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(4),
+    fontWeight: 'bold',
+  },
+  overlayAccesorios: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 98,
+  },
+  ventanaAccesorios: {
+  position: 'absolute',
+  top: isTablet ? hp(20) : hp(18),
+  left: wp(5),  // ← Separado del borde izquierdo
+  backgroundColor: '#e76ba7ff',
+  paddingVertical: hp(20),  // ← Más pequeño en vertical (era hp(1.5))
+  paddingHorizontal: wp(20),  // ← Más grande en horizontal (era wp(4))
+  borderTopRightRadius: wp(3),
+  borderBottomRightRadius: wp(3),
+  borderTopLeftRadius: wp(3),  // ← Agregado para redondear también la izquierda
+  borderBottomLeftRadius: wp(3),  // ← Agregado para redondear también la izquierda
+  zIndex: 99,
+  shadowColor: '#000',
+  shadowOffset: { width: 2, height: 0 },
+  shadowOpacity: 0.3,
+  shadowRadius: 3,
+  elevation: 5,
+  },
+  headerAccesorios: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(2),
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  tituloAccesorios: {
+    fontSize: isSmallDevice ? wp(5) : isTablet ? wp(3.5) : wp(5.5),
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  cerrarAccesorios: {
+    fontSize: isTablet ? wp(5) : wp(7),
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  scrollAccesorios: {
+    flex: 1,
+  },
+  gridAccesorios: {
+    padding: wp(2),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+  },
+  accesorioItem: {
+    width: wp(20),
+    height: wp(20),
+    margin: wp(1.5),
+    borderRadius: wp(2),
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  accesorioImagen: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  sinAccesorios: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: hp(10),
+  },
+  sinAccesoriosTexto: {
+    fontSize: isSmallDevice ? wp(3.5) : wp(4),
+    color: '#999',
+    textAlign: 'center',
+  },
   carouselContainer: {
     flex: 1,
     marginRight: wp(2.5),
-    marginTop: isTablet ? hp(20) : isSmallDevice ? hp(20) : hp(10),
-    marginLeft: isTablet ? wp(25) : wp(30),
+    marginTop: isTablet ? hp(25) : isSmallDevice ? hp(25) : hp(18),
+    marginLeft: 0,
+  },
+  scrollContent: {
+    alignItems: 'center',
+    paddingHorizontal: wp(5),
+  },
+  seccionWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(0.2),
+    width: '100%',
   },
   outerContainer: {
-    marginBottom: hp(0.2),
     borderRadius: 8,
     borderWidth: 0.3,
     borderColor: '#ccc',
@@ -359,11 +646,36 @@ const style = StyleSheet.create({
     color: '#888',
     fontSize: isSmallDevice ? wp(2.5) : wp(3),
   },
+  flechaIzquierda: {
+    marginRight: wp(2),
+    width: wp(8),
+    height: wp(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flechaDerecha: {
+    marginLeft: wp(2),
+    width: wp(8),
+    height: wp(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flechaImagenIzquierda: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+    transform: [{ scaleX: -1 }],
+  },
+  flechaImagenDerecha: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
   menuButton: {
     position: 'absolute',
     top: hp(11),
     right: wp(5),
-    zIndex: 100,
+    zIndex: 200,
     backgroundColor: '#eee',
     padding: wp(2.5),
     borderRadius: wp(1.5),
@@ -380,7 +692,7 @@ const style = StyleSheet.create({
     height: hp(50),
     backgroundColor: '#eee',
     padding: wp(5),
-    zIndex: 101,
+    zIndex: 201,
     elevation: 5,
     shadowColor: '#000',
     shadowOpacity: 0.3,
@@ -396,7 +708,7 @@ const style = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0)',
-    zIndex: 100,
+    zIndex: 202,
   },
   menuRedes: {
     position: 'absolute',
