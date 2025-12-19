@@ -159,6 +159,16 @@ export default function GuardadosScreen() {
     Alert.alert('Compartir', 'Funcionalidad de compartir próximamente');
   };
 
+  const obtenerAccesorios = (accesoriosString: string | null): string[] => {
+    if (!accesoriosString) return [];
+    try {
+      const accesorios = JSON.parse(accesoriosString);
+      return Array.isArray(accesorios) ? accesorios : [];
+    } catch {
+      return [];
+    }
+  };
+
   return (
     <View style={style.container}>
       {/* Botón menú */}
@@ -248,141 +258,164 @@ export default function GuardadosScreen() {
       >
         {conjuntos.length > 0 ? (
           <View style={style.gridContainer}>
-            {conjuntos.map((item) => (
-              <View key={item.id} style={style.conjuntoCard}>
-                {/* Encabezado con nombre de usuario, conjunto y fecha */}
-                <View style={style.headerContainer}>
-                  <View style={style.headerLeft}>
-                    <Text style={style.nombreUsuarioText}>{nombreUsuario}</Text>
+            {conjuntos.map((item) => {
+              const accesorios = obtenerAccesorios(item.prendas.accesorios);
+              const accesoriosIzquierda = accesorios.slice(0, 3);
+              const accesoriosDerecha = accesorios.slice(3, 6);
+              
+              return (
+                <View key={item.id} style={style.conjuntoCard}>
+                  {/* Encabezado con nombre de usuario, conjunto y fecha */}
+                  <View style={style.headerContainer}>
+                    <View style={style.headerLeft}>
+                      <Text style={style.nombreUsuarioText}>{nombreUsuario}</Text>
+                      
+                      {editandoId === item.id ? (
+                        <TextInput
+                          style={style.nombreConjuntoInput}
+                          value={item.nombre || ''}
+                          placeholder="Sin Nombre"
+                          placeholderTextColor="#ccc"
+                          onChangeText={(text) => {
+                            if (text.length <= 25) {
+                              setConjuntos(prev =>
+                                prev.map(c =>
+                                  c.id === item.id ? { ...c, nombre: text } : c
+                                )
+                              );
+                            }
+                          }}
+                          onBlur={() => {
+                            const nombreFinal = item.nombre && item.nombre.trim() !== '' 
+                              ? item.nombre 
+                              : 'Sin Nombre';
+                            actualizarNombreConjunto(item.id, nombreFinal);
+                          }}
+                          autoFocus
+                          selectTextOnFocus
+                          maxLength={25}
+                        />
+                      ) : (
+                        <TouchableOpacity onPress={() => setEditandoId(item.id)}>
+                          <Text style={style.nombreConjuntoText}>
+                            {item.nombre || 'Sin Nombre'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                     
-                    {editandoId === item.id ? (
-                      <TextInput
-                        style={style.nombreConjuntoInput}
-                        value={item.nombre || ''}
-                        placeholder="Sin Nombre"
-                        placeholderTextColor="#ccc"
-                        onChangeText={(text) => {
-                          if (text.length <= 25) {
-                            setConjuntos(prev =>
-                              prev.map(c =>
-                                c.id === item.id ? { ...c, nombre: text } : c
-                              )
-                            );
-                          }
-                        }}
-                        onBlur={() => {
-                          const nombreFinal = item.nombre && item.nombre.trim() !== '' 
-                            ? item.nombre 
-                            : 'Sin Nombre';
-                          actualizarNombreConjunto(item.id, nombreFinal);
-                        }}
-                        autoFocus
-                        selectTextOnFocus
-                        maxLength={25}
-                      />
-                    ) : (
-                      <TouchableOpacity onPress={() => setEditandoId(item.id)}>
-                        <Text style={style.nombreConjuntoText}>
-                          {item.nombre || 'Sin Nombre'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
+                    <View style={style.headerRight}>
+                      <Text style={style.fechaText}>
+                        {new Date(item.fecha.seconds * 1000).toLocaleDateString('es-MX', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </Text>
+                    </View>
                   </View>
-                  
-                  <View style={style.headerRight}>
-                    <Text style={style.fechaText}>
-                      {new Date(item.fecha.seconds * 1000).toLocaleDateString('es-MX', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
-                    </Text>
-                  </View>
+
+{/* Contenedor principal con accesorios a los lados */}
+<View style={style.contenidoConAccesorios}>
+  {/* Accesorios izquierda - SIEMPRE RENDERIZA EL CONTENEDOR */}
+  <View style={style.accesoriosColumna}>
+    {accesoriosIzquierda.length > 0 ? (
+      accesoriosIzquierda.map((accesorio, index) => (
+        <View key={`izq-${index}`} style={style.accesorioBox}>
+          <Image 
+            source={{ uri: accesorio }} 
+            style={style.accesorioImage}
+          />
+        </View>
+      ))
+    ) : null}
+  </View>
+
+  {/* Contenedor de las 3 prendas principales en VERTICAL */}
+  <View style={style.prendasContainer}>
+    {/* Camisa */}
+    <View style={style.prendaBox}>
+      {item.prendas.camisa ? (
+        <Image 
+          source={{ uri: item.prendas.camisa }} 
+          style={style.prendaImage}
+        />
+      ) : (
+        <View style={style.emptyBox}>
+          <Text style={style.emptyText}>-</Text>
+        </View>
+      )}
+    </View>
+
+    {/* Pantalón */}
+    <View style={style.prendaBox}>
+      {item.prendas.pantalon ? (
+        <Image 
+          source={{ uri: item.prendas.pantalon }} 
+          style={style.prendaImage}
+        />
+      ) : (
+        <View style={style.emptyBox}>
+          <Text style={style.emptyText}>-</Text>
+        </View>
+      )}
+    </View>
+
+    {/* Zapatos */}
+    <View style={style.prendaBox}>
+      {item.prendas.zapatos ? (
+        <Image 
+          source={{ uri: item.prendas.zapatos }} 
+          style={style.prendaImage}
+        />
+      ) : (
+        <View style={style.emptyBox}>
+          <Text style={style.emptyText}>-</Text>
+        </View>
+      )}
+    </View>
+  </View>
+
+  {/* Accesorios derecha - SIEMPRE RENDERIZA EL CONTENEDOR */}
+  <View style={style.accesoriosColumna}>
+    {accesoriosDerecha.length > 0 ? (
+      accesoriosDerecha.map((accesorio, index) => (
+        <View key={`der-${index}`} style={style.accesorioBox}>
+          <Image 
+            source={{ uri: accesorio }} 
+            style={style.accesorioImage}
+          />
+        </View>
+      ))
+    ) : null}
+  </View>
+</View>
+
+                  {/* Botón eliminar */}
+                  <TouchableOpacity 
+                    style={style.deleteButtonContainer}
+                    onPress={() => eliminarConjunto(item.id)}
+                  >
+                    <Image 
+                      source={require('@/assets/images/Borrar.png')} 
+                      style={style.deleteButton} 
+                    />
+                  </TouchableOpacity>
+
+                  {/* Botón compartir */}
+                  <TouchableOpacity 
+                    style={style.shareButtonContainer}
+                    onPress={() => compartirConjunto(item.id)}
+                  >
+                    <Image 
+                      source={require('@/assets/images/compa.png')} 
+                      style={style.shareButton} 
+                    />
+                  </TouchableOpacity>
+
                 </View>
-
-                {/* Contenedor de las 4 prendas en VERTICAL */}
-                <View style={style.prendasContainer}>
-                  {/* Accesorios */}
-                  <View style={style.prendaBox}>
-                    {item.prendas.accesorios ? (
-                      <Image 
-                        source={{ uri: item.prendas.accesorios }} 
-                        style={style.prendaImage}
-                      />
-                    ) : (
-                      <View style={style.emptyBox}>
-                        <Text style={style.emptyText}>-</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Camisa */}
-                  <View style={style.prendaBox}>
-                    {item.prendas.camisa ? (
-                      <Image 
-                        source={{ uri: item.prendas.camisa }} 
-                        style={style.prendaImage}
-                      />
-                    ) : (
-                      <View style={style.emptyBox}>
-                        <Text style={style.emptyText}>-</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Pantalón */}
-                  <View style={style.prendaBox}>
-                    {item.prendas.pantalon ? (
-                      <Image 
-                        source={{ uri: item.prendas.pantalon }} 
-                        style={style.prendaImage}
-                      />
-                    ) : (
-                      <View style={style.emptyBox}>
-                        <Text style={style.emptyText}>-</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Zapatos */}
-                  <View style={style.prendaBox}>
-                    {item.prendas.zapatos ? (
-                      <Image 
-                        source={{ uri: item.prendas.zapatos }} 
-                        style={style.prendaImage}
-                      />
-                    ) : (
-                      <View style={style.emptyBox}>
-                        <Text style={style.emptyText}>-</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Botón eliminar */}
-                <TouchableOpacity 
-                  style={style.deleteButtonContainer}
-                  onPress={() => eliminarConjunto(item.id)}
-                >
-                  <Image 
-                    source={require('@/assets/images/Borrar.png')} 
-                    style={style.deleteButton} 
-                  />
-                </TouchableOpacity>
-
-                {/* Botón compartir */}
-                <TouchableOpacity 
-                  style={style.shareButtonContainer}
-                  onPress={() => compartirConjunto(item.id)}
-                >
-                  <Image 
-                    source={require('@/assets/images/compa.png')} 
-                    style={style.shareButton} 
-                  />
-                </TouchableOpacity>
-
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : (
           <View style={style.emptyContainer}>
@@ -532,12 +565,38 @@ const style = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'right',
   },
+  contenidoConAccesorios: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: wp(2),
+  },
+  accesoriosColumna: {
+    flexDirection: 'column',
+    gap: hp(0.5),
+    justifyContent: 'flex-start',
+    width: wp(12),
+  },
+  accesorioBox: {
+    width: wp(12),
+    height: wp(12),
+    borderRadius: wp(2),
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#ffffff',
+  },
+  accesorioImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
   prendasContainer: {
     flexDirection: 'column',
     gap: hp(0.5),
   },
   prendaBox: {
-    width: '100%',
+    width: wp(50),
     height: isTablet ? hp(8) : hp(8),
     borderRadius: wp(2.5),
     overflow: 'hidden',
