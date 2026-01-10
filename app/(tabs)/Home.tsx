@@ -154,7 +154,7 @@ export default function HoraLocalScreen() {
     return containerSize;
   };
 
-  // Función para ir a la siguiente imagen
+  // Función para ir a la siguiente imagen yyy
   const siguienteImagen = (seccion: string) => {
     const imagenes = imagenesPorSeccion[seccion];
     if (!imagenes || imagenes.length === 0) return;
@@ -725,3 +725,4 @@ const style = StyleSheet.create({
     resizeMode: 'contain',
   },
 });
+//cambio de prueba
