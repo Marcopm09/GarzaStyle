@@ -30,13 +30,14 @@ const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
   const translateX = useRef(new Animated.Value(screenWidth)).current;
-  const translateXAccesorios = useRef(new Animated.Value(-wp(50))).current;
+  const translateXAccesorios = useRef(new Animated.Value(-wp(100))).current;
   const [menuVisible, setMenuVisible] = useState(false);
   const [accesoriosVisible, setAccesoriosVisible] = useState(false);
   const hora = useHora();
   const [nombreUsuario, setNombreUsuario] = useState<string>('');
   const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ [key: string]: string[] }>({});
   const [imagenesAccesorios, setImagenesAccesorios] = useState<string[]>([]);
+  const [accesoriosSeleccionados, setAccesoriosSeleccionados] = useState<string[]>([]);
   const [indicesVisibles, setIndicesVisibles] = useState<{ [key: string]: number }>({
     'Camisas / Playeras': 0,
     'Pantalones / Shorts / Faldas': 0,
@@ -75,23 +76,49 @@ export default function HoraLocalScreen() {
     }
   };
 
-  const toggleAccesorios = () => {
-    if (accesoriosVisible) {
-      Animated.timing(translateXAccesorios, {
-        toValue: -wp(50),
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setAccesoriosVisible(false);
-      });
+const toggleAccesorios = () => {
+  if (accesoriosVisible) {
+    Animated.timing(translateXAccesorios, {
+      toValue: -wp(100),
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    // Retrasar el setAccesoriosVisible para que termine la animación
+    setTimeout(() => {
+      setAccesoriosVisible(false);
+    }, 300);  // Mismo tiempo que la duración de la animación
+  } else {
+    setAccesoriosVisible(true);
+    Animated.timing(translateXAccesorios, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }
+};
+
+      
+
+
+  const seleccionarAccesorio = (imagen: string) => {
+    const indiceExistente = accesoriosSeleccionados.indexOf(imagen);
+    
+    if (indiceExistente !== -1) {
+      // Si ya está seleccionado, lo quitamos
+      setAccesoriosSeleccionados(prev => prev.filter(item => item !== imagen));
     } else {
-      setAccesoriosVisible(true);
-      Animated.timing(translateXAccesorios, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      // Si no está seleccionado, verificamos si hay espacio
+      if (accesoriosSeleccionados.length >= 6) {
+        Alert.alert('Límite alcanzado', 'Solo puedes seleccionar hasta 6 accesorios');
+        return;
+      }
+      setAccesoriosSeleccionados(prev => [...prev, imagen]);
     }
+  };
+
+  const obtenerNumeroAccesorio = (imagen: string): number | null => {
+    const indice = accesoriosSeleccionados.indexOf(imagen);
+    return indice !== -1 ? indice + 1 : null;
   };
 
   useEffect(() => {
@@ -154,7 +181,7 @@ export default function HoraLocalScreen() {
     return containerSize;
   };
 
-  // Función para ir a la siguiente imagen yyy
+  // Función para ir a la siguiente imagen
   const siguienteImagen = (seccion: string) => {
     const imagenes = imagenesPorSeccion[seccion];
     if (!imagenes || imagenes.length === 0) return;
@@ -208,7 +235,7 @@ export default function HoraLocalScreen() {
         prendas[nombreCorto] = imagenes && imagenes[indice] ? imagenes[indice] : null;
       });
 
-      prendas['accesorios'] = null;
+      prendas['accesorios'] = accesoriosSeleccionados.length > 0 ? JSON.stringify(accesoriosSeleccionados) : null;
 
       const tienePrendas = Object.values(prendas).some(url => url !== null);
       
@@ -224,6 +251,9 @@ export default function HoraLocalScreen() {
         nombre: 'Sin nombre',
       });
 
+      // Reiniciar accesorios seleccionados después de guardar
+      setAccesoriosSeleccionados([]);
+      
       Alert.alert('¡Éxito!', 'Conjunto guardado correctamente');
       
     } catch (error) {
@@ -244,12 +274,17 @@ export default function HoraLocalScreen() {
       <Text style={style.subtitle}>¡Bienvenido {nombreUsuario}!</Text>
       <Text style={style.horaTexto}>{hora}</Text>
 
-      {/* Pestaña de Accesorios */}
+      {/* Pestaña de Accesorios con Badge */}
       <TouchableOpacity 
         style={style.pestanaAccesorios}
         onPress={toggleAccesorios}
       >
         <Text style={style.pestanaAccesoriosTexto}>Accesorios</Text>
+        {accesoriosSeleccionados.length > 0 && (
+          <View style={style.badge}>
+            <Text style={style.badgeTexto}>{accesoriosSeleccionados.length}</Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       {/* Ventana flotante de Accesorios */}
@@ -268,7 +303,9 @@ export default function HoraLocalScreen() {
             ]}
           >
             <View style={style.headerAccesorios}>
-              <Text style={style.tituloAccesorios}>Accesorios</Text>
+              <Text style={style.tituloAccesorios}>
+                Accesorios ({accesoriosSeleccionados.length}/6)
+              </Text>
               <TouchableOpacity onPress={toggleAccesorios}>
                 <Text style={style.cerrarAccesorios}>✕</Text>
               </TouchableOpacity>
@@ -276,29 +313,45 @@ export default function HoraLocalScreen() {
 
             <ScrollView 
               style={style.scrollAccesorios}
-              contentContainerStyle={style.gridAccesorios}
               showsVerticalScrollIndicator={false}
             >
-              {imagenesAccesorios.length > 0 ? (
-                imagenesAccesorios.map((imagen, index) => (
-                  <TouchableOpacity 
-                    key={index}
-                    style={style.accesorioItem}
-                    activeOpacity={0.7}
-                  >
-                    <Image 
-                      source={{ uri: imagen }}
-                      style={style.accesorioImagen}
-                    />
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={style.sinAccesorios}>
-                  <Text style={style.sinAccesoriosTexto}>
-                    No hay accesorios disponibles
-                  </Text>
-                </View>
-              )}
+              <View style={style.gridAccesorios}>
+                {imagenesAccesorios.length > 0 ? (
+                  imagenesAccesorios.map((imagen, index) => {
+                    const numeroSeleccion = obtenerNumeroAccesorio(imagen);
+                    const estaSeleccionado = numeroSeleccion !== null;
+                    
+                    return (
+                      <View key={index} style={style.accesorioItemContainer}>
+                        <TouchableOpacity 
+                          style={[
+                            style.accesorioItem,
+                            estaSeleccionado && style.accesorioSeleccionado
+                          ]}
+                          activeOpacity={0.7}
+                          onPress={() => seleccionarAccesorio(imagen)}
+                        >
+                          <Image 
+                            source={{ uri: imagen }}
+                            style={style.accesorioImagen}
+                          />
+                          {estaSeleccionado && (
+                            <View style={style.numeroContainer}>
+                              <Text style={style.numeroTexto}>{numeroSeleccion}</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={style.sinAccesorios}>
+                    <Text style={style.sinAccesoriosTexto}>
+                      No hay accesorios disponibles
+                    </Text>
+                  </View>
+                )}
+              </View>
             </ScrollView>
           </Animated.View>
         </>
@@ -410,7 +463,7 @@ export default function HoraLocalScreen() {
         })}
       </ScrollView>
 
-      <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
+      <TouchableOpacity style={[style.menuButton, {zIndex: accesoriosVisible ? 50 : 200}]} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
       </TouchableOpacity>
 
@@ -519,10 +572,31 @@ const style = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   pestanaAccesoriosTexto: {
     color: '#fff',
     fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(4),
+    fontWeight: 'bold',
+  },
+  badge: {
+    position: 'absolute',
+    top: -hp(0.5),
+    right: wp(2),
+    backgroundColor: '#FFD700',
+    borderRadius: wp(3),
+    minWidth: wp(5),
+    height: wp(5),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(1.5),
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  badgeTexto: {
+    color: '#000',
+    fontSize: isSmallDevice ? wp(2.5) : wp(3),
     fontWeight: 'bold',
   },
   overlayAccesorios: {
@@ -531,75 +605,101 @@ const style = StyleSheet.create({
     zIndex: 98,
   },
   ventanaAccesorios: {
-  position: 'absolute',
-  top: isTablet ? hp(20) : hp(18),
-  left: wp(5),  // ← Separado del borde izquierdo
-  backgroundColor: '#e76ba7ff',
-  paddingVertical: hp(20),  // ← Más pequeño en vertical (era hp(1.5))
-  paddingHorizontal: wp(20),  // ← Más grande en horizontal (era wp(4))
-  borderTopRightRadius: wp(3),
-  borderBottomRightRadius: wp(3),
-  borderTopLeftRadius: wp(3),  // ← Agregado para redondear también la izquierda
-  borderBottomLeftRadius: wp(3),  // ← Agregado para redondear también la izquierda
-  zIndex: 99,
-  shadowColor: '#000',
-  shadowOffset: { width: 2, height: 0 },
-  shadowOpacity: 0.3,
-  shadowRadius: 3,
-  elevation: 5,
+    position: 'absolute',
+    top: isTablet ? hp(20) : hp(18),
+    left: wp(5),
+    width: wp(90),
+    backgroundColor: '#e76ba7ff',
+    paddingVertical: hp(2),
+    paddingHorizontal: wp(3),
+    maxHeight: isTablet ? hp(60) : hp(65),
+    overflow: 'hidden',
+    borderRadius: wp(3),
+    zIndex: 99,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
   headerAccesorios: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(2),
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(1),
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(255,255,255,0.3)',
   },
   tituloAccesorios: {
-    fontSize: isSmallDevice ? wp(5) : isTablet ? wp(3.5) : wp(5.5),
+    fontSize: isSmallDevice ? wp(4.5) : isTablet ? wp(3.5) : wp(5),
     fontWeight: 'bold',
-    color: '#000',
+    color: '#fff',
   },
   cerrarAccesorios: {
-    fontSize: isTablet ? wp(5) : wp(7),
-    color: '#666',
+    fontSize: isTablet ? wp(4) : wp(6),
+    color: '#fff',
     fontWeight: 'bold',
   },
   scrollAccesorios: {
     flex: 1,
   },
   gridAccesorios: {
-    padding: wp(2),
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    paddingHorizontal: wp(1),
+    paddingTop: hp(1),
+  },
+  accesorioItemContainer: {
+    width: '25%',
+    aspectRatio: 1,
+    padding: wp(1),
   },
   accesorioItem: {
-    width: wp(20),
-    height: wp(20),
-    margin: wp(1.5),
+    flex: 1,
     borderRadius: wp(2),
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: '#fff',
     overflow: 'hidden',
     backgroundColor: '#fff',
+    position: 'relative',
+  },
+  accesorioSeleccionado: {
+    borderColor: '#FFD700',
+    borderWidth: 3,
   },
   accesorioImagen: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  numeroContainer: {
+    position: 'absolute',
+    top: wp(1),
+    right: wp(1),
+    backgroundColor: '#e76ba7ff',
+    borderRadius: wp(3),
+    width: wp(6),
+    height: wp(6),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  numeroTexto: {
+    color: '#fff',
+    fontSize: isSmallDevice ? wp(3) : wp(3.5),
+    fontWeight: 'bold',
+  },
   sinAccesorios: {
-    flex: 1,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: hp(10),
   },
   sinAccesoriosTexto: {
     fontSize: isSmallDevice ? wp(3.5) : wp(4),
-    color: '#999',
+    color: '#fff',
     textAlign: 'center',
   },
   carouselContainer: {
@@ -724,5 +824,4 @@ const style = StyleSheet.create({
     height: isSmallDevice ? wp(14) : isTablet ? wp(12) : wp(17),
     resizeMode: 'contain',
   },
-});
-//cambio de prueba
+})
