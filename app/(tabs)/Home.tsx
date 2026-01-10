@@ -97,9 +97,6 @@ const toggleAccesorios = () => {
   }
 };
 
-      
-
-
   const seleccionarAccesorio = (imagen: string) => {
     const indiceExistente = accesoriosSeleccionados.indexOf(imagen);
     
@@ -825,3 +822,5 @@ const style = StyleSheet.create({
     resizeMode: 'contain',
   },
 })
+
+//Cambio de enero eyeyeyeyeyeyey
