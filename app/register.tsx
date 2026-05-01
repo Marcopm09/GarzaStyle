@@ -2,17 +2,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    ImageBackground,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function RegisterScreen() {
@@ -23,7 +23,7 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (email && password && verificationCode) {
       await AsyncStorage.setItem("isLoggedIn", "true");
-      router.replace("/(tabs)/Home");
+      router.replace("/(tabs)/cuestionario");
     } else {
       Alert.alert("Error", "Por favor completa todos los campos.");
     }
