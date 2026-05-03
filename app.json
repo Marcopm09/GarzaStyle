@@ -7,6 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "garzastylev13",
     "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
