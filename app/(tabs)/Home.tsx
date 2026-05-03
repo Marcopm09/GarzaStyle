@@ -257,7 +257,7 @@ export default function HoraLocalScreen() {
               <Image source={require('@/assets/images/Gancho.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/perfil')}>
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
@@ -320,7 +320,7 @@ const style = StyleSheet.create({
   horaTexto: {
     fontSize: isSmallDevice ? 12 : isMediumDevice ? 14 : isTablet ? 18 : 16,
     fontWeight: 'bold',
-    color: '#e76ba7ff',
+    color: 'rgb(0, 0, 0)',
     position: 'absolute',
     top: Platform.OS === 'ios' ? hp(6) : hp(5),
     right: wp(5),
@@ -378,7 +378,7 @@ const style = StyleSheet.create({
     right: wp(2.5),
     width: wp(30),
     height: hp(50),
-    backgroundColor: '#eee',
+    backgroundColor: '#4e4e4e',
     padding: wp(5),
     zIndex: 101,
     elevation: 5,

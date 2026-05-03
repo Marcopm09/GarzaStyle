@@ -261,7 +261,7 @@ export default function HoraLocalScreen() {
               <Image source={require('@/assets/images/House.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/perfil')}>
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
@@ -454,7 +454,7 @@ const style = StyleSheet.create({
     right: wp(2),
     width: isTablet ? wp(25) : wp(35),
     height: isTablet ? hp(45) : hp(50),
-    backgroundColor: '#ebd9e2',
+    backgroundColor: '#f9f6ec',
     padding: wp(5),
     borderRadius: wp(3),
     elevation: 10,

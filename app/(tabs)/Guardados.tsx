@@ -214,11 +214,13 @@ export default function GuardadosScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
-              <Image
-                source={require('@/assets/images/Camara.png')}
-                style={style.menuImage}
-              />
+            <TouchableOpacity 
+              onPress={() => {
+                toggleMenu();
+                setTimeout(() => router.push('/(tabs)/perfil'), 300);
+              }}
+            >
+              <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => console.log('aun no')}>
@@ -424,7 +426,7 @@ const style = StyleSheet.create({
   horaTexto: {
     fontSize: isSmallDevice ? wp(4) : isTablet ? wp(3) : wp(4.5),
     fontWeight: 'bold',
-    color: '#e76ba7ff',
+    color: 'rgb(252, 252, 252)',
     position: 'absolute',
     top: Platform.OS === 'ios' ? hp(6) : hp(5),
     right: wp(8),
@@ -448,7 +450,7 @@ const style = StyleSheet.create({
     right: wp(2),
     width: isTablet ? wp(25) : wp(35),
     height: isTablet ? hp(45) : hp(50),
-    backgroundColor: '#ebd9e2',
+    backgroundColor: '#f6f6f5',
     padding: wp(5),
     borderRadius: wp(3),
     elevation: 10,
