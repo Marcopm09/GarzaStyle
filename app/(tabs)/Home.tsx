@@ -497,7 +497,7 @@ const toggleAccesorios = () => {
               <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
+            <TouchableOpacity onPress={() => router.push('/Colorimetria')}>
               <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
             </TouchableOpacity>
 
