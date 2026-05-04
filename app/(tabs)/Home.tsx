@@ -17,8 +17,8 @@ import {
   View
 } from 'react-native';
 import { db } from '../../firebaseConfig';
+import { useClima } from '../Clima';
 import { useHora } from '../Hora';
-
 const { width, height } = Dimensions.get('window');
 const screenWidth = Dimensions.get('window').width;
 
@@ -29,11 +29,13 @@ const isMediumDevice = width >= 360 && width < 400;
 const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
+  
   const translateX = useRef(new Animated.Value(screenWidth)).current;
   const translateXAccesorios = useRef(new Animated.Value(-wp(100))).current;
   const [menuVisible, setMenuVisible] = useState(false);
   const [accesoriosVisible, setAccesoriosVisible] = useState(false);
   const hora = useHora();
+  const clima = useClima();
   const [nombreUsuario, setNombreUsuario] = useState<string>('');
   const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ [key: string]: string[] }>({});
   const [imagenesAccesorios, setImagenesAccesorios] = useState<string[]>([]);
@@ -270,6 +272,7 @@ const toggleAccesorios = () => {
 
       <Text style={style.subtitle}>¡Bienvenido {nombreUsuario}!</Text>
       <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.climaTexto}>{clima}</Text> 
 
       {/* Pestaña de Accesorios con Badge */}
       <TouchableOpacity 
@@ -486,7 +489,7 @@ const toggleAccesorios = () => {
               <Image source={require('@/assets/images/Gancho.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/perfil')}>
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
@@ -549,7 +552,7 @@ const style = StyleSheet.create({
   horaTexto: {
     fontSize: isSmallDevice ? 12 : isMediumDevice ? 14 : isTablet ? 18 : 16,
     fontWeight: 'bold',
-    color: '#e76ba7ff',
+    color: 'rgb(0, 0, 0)',
     position: 'absolute',
     top: Platform.OS === 'ios' ? hp(6) : hp(5),
     right: wp(5),
@@ -787,7 +790,7 @@ const style = StyleSheet.create({
     right: wp(2.5),
     width: wp(30),
     height: hp(50),
-    backgroundColor: '#eee',
+    backgroundColor: '#4e4e4e',
     padding: wp(5),
     zIndex: 201,
     elevation: 5,
@@ -821,6 +824,13 @@ const style = StyleSheet.create({
     height: isSmallDevice ? wp(14) : isTablet ? wp(12) : wp(17),
     resizeMode: 'contain',
   },
-})
 
-//Cambio de enero eyeyeyeyeyeyey
+  climaTexto: {
+    fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : isTablet ? 17 : 15,
+    fontWeight: '600',
+    color: 'rgb(0, 0, 0)',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? hp(9) : hp(8),  // ligeramente abajo de la hora
+    right: wp(5),
+  },
+});

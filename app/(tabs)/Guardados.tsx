@@ -9,6 +9,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +17,7 @@ import {
   View
 } from 'react-native';
 import { db } from '../../firebaseConfig';
+import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
 const screenWidth = Dimensions.get('window').width;
@@ -41,6 +43,7 @@ interface Conjunto {
 
 export default function GuardadosScreen() {
   const hora = useHora();
+  const clima = useClima();
   const [menuVisible, setMenuVisible] = useState(false);
   const translateX = useRef(new Animated.Value(screenWidth)).current;
   const [conjuntos, setConjuntos] = useState<Conjunto[]>([]);
@@ -54,10 +57,10 @@ export default function GuardadosScreen() {
         toValue: screenWidth,
         duration: 300,
         useNativeDriver: true,
-      }).start(() => { 
-        setTimeout(() => { 
-          setMenuVisible(false); 
-        }, 10); 
+      }).start(() => {
+        setTimeout(() => {
+          setMenuVisible(false);
+        }, 10);
       });
     } else {
       setMenuVisible(true);
@@ -97,10 +100,10 @@ export default function GuardadosScreen() {
         id: doc.id,
         ...doc.data()
       })) as Conjunto[];
-      
+
       // Ordenar por fecha más reciente
       conjuntosData.sort((a, b) => b.fecha.seconds - a.fecha.seconds);
-      
+
       setConjuntos(conjuntosData);
     } catch (error) {
       console.error('Error cargando conjuntos:', error);
@@ -114,16 +117,16 @@ export default function GuardadosScreen() {
       await updateDoc(docRef, {
         nombre: nuevoNombre
       });
-      
+
       // Actualizar estado local
-      setConjuntos(prev => 
-        prev.map(conjunto => 
-          conjunto.id === id 
+      setConjuntos(prev =>
+        prev.map(conjunto =>
+          conjunto.id === id
             ? { ...conjunto, nombre: nuevoNombre }
             : conjunto
         )
       );
-      
+
       setEditandoId(null);
     } catch (error) {
       console.error('Error actualizando nombre:', error);
@@ -171,6 +174,7 @@ export default function GuardadosScreen() {
 
   return (
     <View style={style.container}>
+      <StatusBar hidden={true} />
       {/* Botón menú */}
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
@@ -194,8 +198,8 @@ export default function GuardadosScreen() {
               },
             ]}
             onStartShouldSetResponder={() => true}
-          > 
-            <TouchableOpacity 
+          >
+            <TouchableOpacity
               onPress={() => {
                 toggleMenu();
                 setTimeout(() => router.push('/Home'), 300);
@@ -206,8 +210,8 @@ export default function GuardadosScreen() {
                 style={style.menuImage}
               />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={() => {
                 toggleMenu();
                 setTimeout(() => router.push('/Armario'), 300);
@@ -219,11 +223,13 @@ export default function GuardadosScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
-              <Image
-                source={require('@/assets/images/Camara.png')}
-                style={style.menuImage}
-              />
+            <TouchableOpacity
+              onPress={() => {
+                toggleMenu();
+                setTimeout(() => router.push('/(tabs)/perfil'), 300);
+              }}
+            >
+              <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => console.log('aun no')}>
@@ -244,6 +250,7 @@ export default function GuardadosScreen() {
       )}
 
       <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.climaTexto}>{clima}</Text>
       <Text style={style.subtitle}>TUS GUARDADOS</Text>
       <Image
         source={require('@/assets/images/Logo_GarzaStyle.png')}
@@ -251,7 +258,7 @@ export default function GuardadosScreen() {
       />
 
       {/* ScrollView para permitir scroll completo */}
-      <ScrollView 
+      <ScrollView
         style={style.scrollContainer}
         contentContainerStyle={style.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -396,9 +403,9 @@ export default function GuardadosScreen() {
                     style={style.deleteButtonContainer}
                     onPress={() => eliminarConjunto(item.id)}
                   >
-                    <Image 
-                      source={require('@/assets/images/Borrar.png')} 
-                      style={style.deleteButton} 
+                    <Image
+                      source={require('@/assets/images/Borrar.png')}
+                      style={style.deleteButton}
                     />
                   </TouchableOpacity>
 
@@ -407,9 +414,9 @@ export default function GuardadosScreen() {
                     style={style.shareButtonContainer}
                     onPress={() => compartirConjunto(item.id)}
                   >
-                    <Image 
-                      source={require('@/assets/images/compa.png')} 
-                      style={style.shareButton} 
+                    <Image
+                      source={require('@/assets/images/compa.png')}
+                      style={style.shareButton}
                     />
                   </TouchableOpacity>
 
@@ -452,7 +459,7 @@ const style = StyleSheet.create({
   horaTexto: {
     fontSize: isSmallDevice ? wp(4) : isTablet ? wp(3) : wp(4.5),
     fontWeight: 'bold',
-    color: '#e76ba7ff',
+    color: 'rgb(252, 252, 252)',
     position: 'absolute',
     top: Platform.OS === 'ios' ? hp(6) : hp(5),
     right: wp(8),
@@ -476,7 +483,7 @@ const style = StyleSheet.create({
     right: wp(2),
     width: isTablet ? wp(25) : wp(35),
     height: isTablet ? hp(45) : hp(50),
-    backgroundColor: '#ebd9e2',
+    backgroundColor: '#f6f6f5',
     padding: wp(5),
     borderRadius: wp(3),
     elevation: 10,
@@ -661,5 +668,13 @@ const style = StyleSheet.create({
     color: '#999',
     fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(3.8),
     textAlign: 'center',
+  },
+  climaTexto: {
+    fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : isTablet ? 17 : 15,
+    fontWeight: '600',
+    color: 'rgb(255, 255, 255)',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? hp(9) : hp(8),  // ligeramente abajo de la hora
+    right: wp(5),
   },
 });

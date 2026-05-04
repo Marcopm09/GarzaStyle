@@ -1,12 +1,11 @@
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { ClimaProvider } from './Clima';
 import { HoraProvider } from './Hora';
-
-
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function RootLayout() {
   
@@ -22,14 +21,16 @@ export default function RootLayout() {
   
   return (
     <HoraProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-          <Stack.Screen name="Home" options={{headerShown: false}}/>
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <ClimaProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" />
+            <Stack.Screen name="Home" options={{headerShown: false}}/>
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </ClimaProvider>
     </HoraProvider>
   );
 }
