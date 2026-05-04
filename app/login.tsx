@@ -1,4 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "../firebaseConfig";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -20,11 +22,51 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
-    if (email && password) {
+    if (!email || !password) {
+      Alert.alert("Error", "Por favor ingresa tu correo y contraseña.");
+      return;
+    }
+
+    try {
+      // 1. Intentar iniciar sesión en Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Validar si el correo institucional ya fue verificado
+      if (!user.emailVerified) {
+        Alert.alert(
+          "Correo no verificado",
+          "Por favor, revisa tu bandeja de entrada (@uaeh.edu.mx) y verifica tu cuenta antes de ingresar."
+        );
+        return;
+      }
+
+      // 3. Si todo está bien, guardar sesión y entrar
       await AsyncStorage.setItem("isLoggedIn", "true");
       router.replace("/(tabs)/Home");
-    } else {
-      Alert.alert("Error", "Por favor ingresa tu correo y contraseña.");
+
+    } catch (error: any) {
+      console.error(error);
+      let message = "Credenciales incorrectas o error de conexión.";
+      
+      if (error.code === "auth/user-not-found") message = "No existe una cuenta con este correo.";
+      if (error.code === "auth/wrong-password") message = "La contraseña es incorrecta.";
+      if (error.code === "auth/invalid-credential") message = "Correo o contraseña no válidos.";
+      
+      Alert.alert("Error de Inicio", message);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert("Atención", "Ingresa tu correo institucional para enviarte un enlace de recuperación.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert("Recuperación enviada", "Revisa tu correo @uaeh.edu.mx para restablecer tu contraseña.");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo enviar el correo de recuperación.");
     }
   };
 
@@ -58,7 +100,7 @@ export default function LoginScreen() {
                 styles.overlay,
                 {
                   width: width * 0.85,
-                  paddingVertical: height < 700 ? 20 : 40,
+                  paddingVertical: height < 700 ? 30 : 50,
                 },
               ]}
             >
@@ -69,11 +111,11 @@ export default function LoginScreen() {
               <Text
                 style={[styles.subtitle, { fontSize: width < 360 ? 13 : 16 }]}
               >
-                INGRESA CON TU CUENTA
+                INGRESA CON TU CUENTA GARZA
               </Text>
 
               <TextInput
-                placeholder="Dirección de correo"
+                placeholder="Correo @uaeh.edu.mx"
                 placeholderTextColor="#828282ff"
                 value={email}
                 onChangeText={setEmail}
@@ -91,15 +133,17 @@ export default function LoginScreen() {
                 style={styles.input}
               />
 
-              <Text style={styles.link}>¿OLVIDASTE TU CONTRASEÑA?</Text>
+              <TouchableOpacity onPress={handleForgotPassword}>
+                <Text style={styles.link}>¿OLVIDASTE TU CONTRASEÑA?</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity style={styles.button} onPress={handleLogin}>
                 <Text style={styles.buttonText}>INGRESAR</Text>
               </TouchableOpacity>
 
-              <Text style={styles.link} onPress={goToRegister}>
-                ¿NO TIENES CUENTA?
-              </Text>
+              <TouchableOpacity onPress={goToRegister}>
+                <Text style={styles.link}>¿NO TIENES CUENTA? REGÍSTRATE</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -118,8 +162,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   overlay: {
-    backgroundColor: "rgba(22, 22, 22, 0.4)",
-    borderRadius: 25,
+    backgroundColor: "rgba(22, 22, 22, 0.7)",
+    borderRadius: 30,
     paddingHorizontal: 25,
     alignItems: "center",
   },
@@ -133,34 +177,39 @@ const styles = StyleSheet.create({
     color: "white",
     textAlign: "center",
     letterSpacing: 1,
-    marginBottom: 40,
+    marginBottom: 35,
+    textTransform: "uppercase",
   },
   input: {
     width: "100%",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 25,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     marginBottom: 15,
-    fontSize: 14,
+    fontSize: 16,
   },
   button: {
     width: "100%",
-    backgroundColor: "rgba(226, 205, 205, 0.2)",
+    backgroundColor: "rgba(226, 205, 205, 0.3)",
     borderRadius: 25,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: "center",
     marginVertical: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
-    letterSpacing: 1,
+    letterSpacing: 2,
+    fontSize: 16,
   },
   link: {
     color: "rgba(214, 209, 209, 1)",
     textAlign: "center",
     fontSize: 13,
-    marginVertical: 4,
+    marginVertical: 8,
+    textDecorationLine: "underline",
   },
 });

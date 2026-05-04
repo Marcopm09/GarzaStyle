@@ -1,4 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth, db } from "../firebaseConfig";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -18,14 +21,68 @@ import {
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
 
   const handleRegister = async () => {
-    if (email && password && verificationCode) {
-      await AsyncStorage.setItem("isLoggedIn", "true");
-      router.replace("/(tabs)/cuestionario");
-    } else {
+    // 1. Validación de campos obligatorios
+    if (!email || !password) {
       Alert.alert("Error", "Por favor completa todos los campos.");
+      return;
+    }
+
+    // 2. Validación estricta del dominio institucional UAEH
+    const uaehDomain = "@uaeh.edu.mx";
+    if (!email.endsWith(uaehDomain)) {
+      Alert.alert(
+        "Acceso Restringido", 
+        "Debes usar tu correo institucional de la UAEH para registrarte."
+      );
+      return;
+    }
+
+    try {
+      // 3. Creación del usuario en Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 4. Registro de datos en Firestore (Colección Usuarios)
+      await setDoc(doc(db, "Usuarios", user.uid), {
+        email: user.email,
+        uid: user.uid,
+        createdAt: new Date(),
+        rol: "estudiante"
+      });
+
+      // 5. Envío de correo de verificación
+      await sendEmailVerification(user);
+
+      // 6. Notificación y redirección al Login
+      Alert.alert(
+        "¡Registro exitoso!",
+        "Se ha enviado un enlace de confirmación a tu correo institucional. Por favor, verifícalo para activar tu cuenta.",
+        [
+          {
+            text: "Entendido",
+            onPress: () => {
+              setEmail("");
+              setPassword("");
+              router.replace("/login");
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error(error);
+      let message = "No se pudo completar el registro.";
+      
+      if (error.code === "auth/email-already-in-use") {
+        message = "Este correo institucional ya está registrado.";
+      } else if (error.code === "auth/weak-password") {
+        message = "La contraseña debe tener al menos 6 caracteres.";
+      } else if (error.code === "auth/invalid-email") {
+        message = "El formato del correo no es válido.";
+      }
+      
+      Alert.alert("Error de Registro", message);
     }
   };
 
@@ -60,7 +117,7 @@ export default function RegisterScreen() {
                 styles.overlay,
                 {
                   width: width * 0.85,
-                  paddingVertical: height < 700 ? 20 : 40,
+                  paddingVertical: height < 700 ? 30 : 50,
                 },
               ]}
             >
@@ -71,11 +128,11 @@ export default function RegisterScreen() {
               <Text
                 style={[styles.subtitle, { fontSize: width < 360 ? 13 : 16 }]}
               >
-                BRÍNDANOS TU CORREO
+                CREA TU CUENTA INSTITUCIONAL
               </Text>
 
               <TextInput
-                placeholder="Dirección de correo"
+                placeholder="Correo @uaeh.edu.mx"
                 placeholderTextColor="#828282ff"
                 value={email}
                 onChangeText={setEmail}
@@ -93,33 +150,12 @@ export default function RegisterScreen() {
                 style={styles.input}
               />
 
-              <Text
-                style={[
-                  styles.subtitle,
-                  {
-                    fontSize: width < 360 ? 12 : 14,
-                    marginBottom: 20,
-                    marginTop: 10,
-                  },
-                ]}
-              >
-                REVISA TU CORREO E INGRESA EL CÓDIGO
-              </Text>
-
-              <TextInput
-                placeholder="Código de verificación"
-                placeholderTextColor="#828282ff"
-                value={verificationCode}
-                onChangeText={setVerificationCode}
-                style={styles.input}
-              />
-
               <TouchableOpacity style={styles.button} onPress={handleRegister}>
                 <Text style={styles.buttonText}>REGISTRAR</Text>
               </TouchableOpacity>
 
               <Text style={styles.link} onPress={goToLogin}>
-                VOLVER AL LOGIN
+                ¿YA TIENES CUENTA? INICIA SESIÓN
               </Text>
             </View>
           </ScrollView>
@@ -139,8 +175,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   overlay: {
-    backgroundColor: "rgba(22, 22, 22, 0.4)",
-    borderRadius: 25,
+    backgroundColor: "rgba(22, 22, 22, 0.7)", // Opacidad mejorada para legibilidad
+    borderRadius: 30,
     paddingHorizontal: 25,
     alignItems: "center",
   },
@@ -148,40 +184,45 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "900",
     textAlign: "center",
-    marginBottom: 5,
+    marginBottom: 10,
   },
   subtitle: {
     color: "white",
     textAlign: "center",
     letterSpacing: 1,
-    marginBottom: 40,
+    marginBottom: 30,
+    textTransform: "uppercase",
   },
   input: {
     width: "100%",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 25,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     marginBottom: 15,
-    fontSize: 14,
+    fontSize: 16,
   },
   button: {
     width: "100%",
-    backgroundColor: "rgba(226, 205, 205, 0.2)",
+    backgroundColor: "rgba(226, 205, 205, 0.3)",
     borderRadius: 25,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: "center",
-    marginVertical: 20,
+    marginTop: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
-    letterSpacing: 1,
+    letterSpacing: 2,
+    fontSize: 16,
   },
   link: {
     color: "rgba(214, 209, 209, 1)",
     textAlign: "center",
-    fontSize: 13,
-    marginVertical: 4,
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 });
