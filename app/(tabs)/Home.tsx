@@ -17,8 +17,8 @@ import {
   View
 } from 'react-native';
 import { db } from '../../firebaseConfig';
+import { useClima } from '../Clima';
 import { useHora } from '../Hora';
-
 const { width, height } = Dimensions.get('window');
 const screenWidth = Dimensions.get('window').width;
 
@@ -29,9 +29,11 @@ const isMediumDevice = width >= 360 && width < 400;
 const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
+  
   const translateX = useRef(new Animated.Value(screenWidth)).current;
   const [menuVisible, setMenuVisible] = useState(false);
   const hora = useHora();
+  const clima = useClima();
   const [nombreUsuario, setNombreUsuario] = useState<string>('');
   const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ [key: string]: string[] }>({});
   const [indicesVisibles, setIndicesVisibles] = useState<{ [key: string]: number }>({
@@ -167,6 +169,7 @@ export default function HoraLocalScreen() {
 
       <Text style={style.subtitle}>¡Bienvenido {nombreUsuario}!</Text>
       <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.climaTexto}>{clima}</Text> 
 
       <ScrollView 
         style={style.carouselContainer}
@@ -411,5 +414,13 @@ const style = StyleSheet.create({
     width: isSmallDevice ? wp(14) : isTablet ? wp(12) : wp(17),
     height: isSmallDevice ? wp(14) : isTablet ? wp(12) : wp(17),
     resizeMode: 'contain',
+  },
+  climaTexto: {
+    fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : isTablet ? 17 : 15,
+    fontWeight: '600',
+    color: 'rgb(0, 0, 0)',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? hp(9) : hp(8),  // ligeramente abajo de la hora
+    right: wp(5),
   },
 });

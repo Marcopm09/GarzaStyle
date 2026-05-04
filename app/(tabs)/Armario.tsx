@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { db, storage } from '../../firebaseConfig';
+import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
 const { width, height } = Dimensions.get('window');
@@ -33,6 +34,7 @@ const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
   const hora = useHora();
+  const clima = useClima(); 
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [seccionSeleccionada, setSeccionSeleccionada] = useState<string>('');
@@ -41,15 +43,15 @@ export default function HoraLocalScreen() {
     seccion: string;
     docId?: string;
   } | null>(null);
-  const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{ 
-    [key: string]: { uri: string; docId: string }[] 
+  const [imagenesPorSeccion, setImagenesPorSeccion] = useState<{
+    [key: string]: { uri: string; docId: string }[]
   }>({
     Accesorios: [],
     'Camisas / Playeras': [],
     'Pantalones / Shorts / Faldas': [],
     'Tenis / Zapatos': [],
   });
-  
+
   const [mensajeVisible, setMensajeVisible] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
@@ -115,7 +117,7 @@ export default function HoraLocalScreen() {
           onPress: async () => {
             const imagenAEliminar = imagenSeleccionada;
             setImagenSeleccionada(null);
-            
+
             try {
               if (imagenAEliminar.docId) {
                 await deleteDoc(doc(db, 'Prendas', imagenAEliminar.docId));
@@ -248,7 +250,7 @@ export default function HoraLocalScreen() {
   return (
     <View style={style.container}>
       <StatusBar hidden={true} />
-      
+
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
       </TouchableOpacity>
@@ -281,6 +283,7 @@ export default function HoraLocalScreen() {
       )}
 
       <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.climaTexto}>{clima}</Text>
       <Text style={style.subtitle}>Tu armario digital!!</Text>
       <Image source={require('@/assets/images/Logo_GarzaStyle.png')} style={style.GarzaLogo} />
 
@@ -318,8 +321,8 @@ export default function HoraLocalScreen() {
           )
         )}
 
-        <TouchableOpacity 
-          style={style.bottomButton} 
+        <TouchableOpacity
+          style={style.bottomButton}
           onPress={() => mostrarMensaje('Próximamente...')}
         >
           <Image
@@ -342,10 +345,10 @@ export default function HoraLocalScreen() {
               <Text style={style.textoModalButton}>Galería</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={style.modalButton} 
+            <TouchableOpacity
+              style={style.modalButton}
               onPress={() => {
-                setModalVisible(false); 
+                setModalVisible(false);
                 tomarFoto('usuario1', seccionSeleccionada);
               }}
             >
@@ -366,7 +369,7 @@ export default function HoraLocalScreen() {
             style={style.modalImagenFondo}
             onPress={() => setImagenSeleccionada(null)}
           />
-          
+
           <View style={style.contenedorImagenGrande}>
             <Image
               source={{ uri: imagenSeleccionada?.uri }}
@@ -615,5 +618,13 @@ const style = StyleSheet.create({
     color: 'white',
     fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(4),
     textAlign: 'center',
+  },
+  climaTexto: {
+    fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : isTablet ? 17 : 15,
+    fontWeight: '600',
+    color: 'rgb(255, 255, 255)',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? hp(10) : hp(8),  // ligeramente abajo de la hora
+    right: wp(5),
   },
 });

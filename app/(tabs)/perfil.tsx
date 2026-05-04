@@ -16,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
 const { width, height } = Dimensions.get('window');
@@ -26,6 +27,7 @@ const isTablet = width >= 768;
 
 export default function PerfilScreen() {
     const hora = useHora();
+    const climar = useClima();
 
     const [menuVisible, setMenuVisible] = useState(false);
     const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export default function PerfilScreen() {
                 />
                 <View style={styles.headerRight}>
                     <Text style={styles.horaTexto}>{hora}</Text>
-                    <Text style={styles.tempTexto}>23°C</Text>
+                    <Text style={styles.tempTexto}>{climar}</Text>
                 </View>
             </View>
 

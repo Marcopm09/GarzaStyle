@@ -17,6 +17,7 @@ import {
   View
 } from 'react-native';
 import { db } from '../../firebaseConfig';
+import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
 const screenWidth = Dimensions.get('window').width;
@@ -44,6 +45,7 @@ interface Conjunto {
 
 export default function GuardadosScreen() {
   const hora = useHora();
+  const clima = useClima();
   const [menuVisible, setMenuVisible] = useState(false);
   const translateX = useRef(new Animated.Value(screenWidth)).current;
   const [conjuntos, setConjuntos] = useState<Conjunto[]>([]);
@@ -57,10 +59,10 @@ export default function GuardadosScreen() {
         toValue: screenWidth,
         duration: 300,
         useNativeDriver: true,
-      }).start(() => { 
-        setTimeout(() => { 
-          setMenuVisible(false); 
-        }, 10); 
+      }).start(() => {
+        setTimeout(() => {
+          setMenuVisible(false);
+        }, 10);
       });
     } else {
       setMenuVisible(true);
@@ -100,10 +102,10 @@ export default function GuardadosScreen() {
         id: doc.id,
         ...doc.data()
       })) as Conjunto[];
-      
+
       // Ordenar por fecha más reciente
       conjuntosData.sort((a, b) => b.fecha.seconds - a.fecha.seconds);
-      
+
       setConjuntos(conjuntosData);
     } catch (error) {
       console.error('Error cargando conjuntos:', error);
@@ -117,16 +119,16 @@ export default function GuardadosScreen() {
       await updateDoc(docRef, {
         nombre: nuevoNombre
       });
-      
+
       // Actualizar estado local
-      setConjuntos(prev => 
-        prev.map(conjunto => 
-          conjunto.id === id 
+      setConjuntos(prev =>
+        prev.map(conjunto =>
+          conjunto.id === id
             ? { ...conjunto, nombre: nuevoNombre }
             : conjunto
         )
       );
-      
+
       setEditandoId(null);
     } catch (error) {
       console.error('Error actualizando nombre:', error);
@@ -165,7 +167,7 @@ export default function GuardadosScreen() {
   return (
     <View style={style.container}>
       <StatusBar hidden={true} />
-      
+
       {/* Botón menú */}
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
@@ -189,8 +191,8 @@ export default function GuardadosScreen() {
               },
             ]}
             onStartShouldSetResponder={() => true}
-          > 
-            <TouchableOpacity 
+          >
+            <TouchableOpacity
               onPress={() => {
                 toggleMenu();
                 setTimeout(() => router.push('/Home'), 300);
@@ -201,8 +203,8 @@ export default function GuardadosScreen() {
                 style={style.menuImage}
               />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={() => {
                 toggleMenu();
                 setTimeout(() => router.push('/Armario'), 300);
@@ -214,7 +216,7 @@ export default function GuardadosScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 toggleMenu();
                 setTimeout(() => router.push('/(tabs)/perfil'), 300);
@@ -241,6 +243,7 @@ export default function GuardadosScreen() {
       )}
 
       <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.climaTexto}>{clima}</Text>
       <Text style={style.subtitle}>TUS GUARDADOS</Text>
       <Image
         source={require('@/assets/images/Logo_GarzaStyle.png')}
@@ -248,7 +251,7 @@ export default function GuardadosScreen() {
       />
 
       {/* ScrollView para permitir scroll completo */}
-      <ScrollView 
+      <ScrollView
         style={style.scrollContainer}
         contentContainerStyle={style.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -261,7 +264,7 @@ export default function GuardadosScreen() {
                 <View style={style.headerContainer}>
                   <View style={style.headerLeft}>
                     <Text style={style.nombreUsuarioText}>{nombreUsuario}</Text>
-                    
+
                     {editandoId === item.id ? (
                       <TextInput
                         style={style.nombreConjuntoInput}
@@ -278,8 +281,8 @@ export default function GuardadosScreen() {
                           }
                         }}
                         onBlur={() => {
-                          const nombreFinal = item.nombre && item.nombre.trim() !== '' 
-                            ? item.nombre 
+                          const nombreFinal = item.nombre && item.nombre.trim() !== ''
+                            ? item.nombre
                             : 'Sin Nombre';
                           actualizarNombreConjunto(item.id, nombreFinal);
                         }}
@@ -295,7 +298,7 @@ export default function GuardadosScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-                  
+
                   <View style={style.headerRight}>
                     <Text style={style.fechaText}>
                       {new Date(item.fecha.seconds * 1000).toLocaleDateString('es-MX', {
@@ -312,8 +315,8 @@ export default function GuardadosScreen() {
                   {/* Accesorios */}
                   <View style={style.prendaBox}>
                     {item.prendas.accesorios ? (
-                      <Image 
-                        source={{ uri: item.prendas.accesorios }} 
+                      <Image
+                        source={{ uri: item.prendas.accesorios }}
                         style={style.prendaImage}
                       />
                     ) : (
@@ -326,8 +329,8 @@ export default function GuardadosScreen() {
                   {/* Camisa */}
                   <View style={style.prendaBox}>
                     {item.prendas.camisa ? (
-                      <Image 
-                        source={{ uri: item.prendas.camisa }} 
+                      <Image
+                        source={{ uri: item.prendas.camisa }}
                         style={style.prendaImage}
                       />
                     ) : (
@@ -340,8 +343,8 @@ export default function GuardadosScreen() {
                   {/* Pantalón */}
                   <View style={style.prendaBox}>
                     {item.prendas.pantalon ? (
-                      <Image 
-                        source={{ uri: item.prendas.pantalon }} 
+                      <Image
+                        source={{ uri: item.prendas.pantalon }}
                         style={style.prendaImage}
                       />
                     ) : (
@@ -354,8 +357,8 @@ export default function GuardadosScreen() {
                   {/* Zapatos */}
                   <View style={style.prendaBox}>
                     {item.prendas.zapatos ? (
-                      <Image 
-                        source={{ uri: item.prendas.zapatos }} 
+                      <Image
+                        source={{ uri: item.prendas.zapatos }}
                         style={style.prendaImage}
                       />
                     ) : (
@@ -368,23 +371,23 @@ export default function GuardadosScreen() {
 
                 {/* Botones de acción */}
                 <View style={style.botonesAccion}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={style.deleteButtonContainer}
                     onPress={() => eliminarConjunto(item.id)}
                   >
-                    <Image 
-                      source={require('@/assets/images/Borrar.png')} 
-                      style={style.deleteButton} 
+                    <Image
+                      source={require('@/assets/images/Borrar.png')}
+                      style={style.deleteButton}
                     />
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={style.shareButtonContainer}
                     onPress={() => compartirConjunto(item.id)}
                   >
-                    <Image 
-                      source={require('@/assets/images/compa.png')} 
-                      style={style.shareButton} 
+                    <Image
+                      source={require('@/assets/images/compa.png')}
+                      style={style.shareButton}
                     />
                   </TouchableOpacity>
                 </View>
@@ -611,5 +614,13 @@ const style = StyleSheet.create({
     color: '#999',
     fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(3.8),
     textAlign: 'center',
+  },
+  climaTexto: {
+    fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : isTablet ? 17 : 15,
+    fontWeight: '600',
+    color: 'rgb(255, 255, 255)',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? hp(9) : hp(8),  // ligeramente abajo de la hora
+    right: wp(5),
   },
 });
