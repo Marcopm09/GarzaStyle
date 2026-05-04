@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import { StyleSheet, Image, Platform } from 'react-native';
+=======
+import { Image } from 'expo-image';
+import { Platform, StyleSheet } from 'react-native';
+>>>>>>> main
 
 import { Collapsible } from '@/components/Collapsible';
 import { ExternalLink } from '@/components/ExternalLink';
@@ -20,7 +25,11 @@ export default function TabTwoScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
+<<<<<<< HEAD
         <ThemedText type="title">la otra</ThemedText>
+=======
+        <ThemedText type="title">Explore</ThemedText>
+>>>>>>> main
       </ThemedView>
       <ThemedText>This app includes example code to help you get started.</ThemedText>
       <Collapsible title="File-based routing">
@@ -69,7 +78,11 @@ export default function TabTwoScreen() {
         <ThemedText>
           This template has light and dark mode support. The{' '}
           <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
+<<<<<<< HEAD
           what the user's current color scheme is, and so you can adjust UI colors accordingly.
+=======
+          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
+>>>>>>> main
         </ThemedText>
         <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
           <ThemedText type="link">Learn more</ThemedText>

@@ -1,5 +1,6 @@
 {
   "expo": {
+<<<<<<< HEAD
     "name": "Garza-Style",
     "slug": "Garza-Style",
     "version": "1.0.0",
@@ -10,12 +11,43 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
+=======
+    "name": "GarzaStyleV1.3",
+    "slug": "GarzaStyleV1.3",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "garzastylev13",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "GarzaStyle necesita acceso a tu cámara para tomar fotos de tus prendas.",
+        "NSPhotoLibraryUsageDescription": "GarzaStyle necesita acceso a tu galería para seleccionar fotos de tus prendas.",
+        "NSPhotoLibraryAddUsageDescription": "GarzaStyle necesita permiso para guardar fotos en tu galería."
+      }
+>>>>>>> main
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+<<<<<<< HEAD
       }
+=======
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
+>>>>>>> main
     },
     "web": {
       "bundler": "metro",
@@ -32,6 +64,16 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+<<<<<<< HEAD
+=======
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GarzaStyle necesita acceso a tus fotos para que puedas subir imágenes de tus prendas.",
+          "cameraPermission": "GarzaStyle necesita acceso a tu cámara para que puedas tomar fotos de tus prendas."
+        }
+>>>>>>> main
       ]
     ],
     "experiments": {

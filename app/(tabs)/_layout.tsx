@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
@@ -52,5 +53,18 @@ export default function TabLayout() {
     </Tabs>
     
     
+=======
+import { Stack } from 'expo-router';
+import React from 'react';
+
+export default function Layout() {
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'default',
+      }}
+    />
+>>>>>>> main
   );
 }
