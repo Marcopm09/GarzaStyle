@@ -1,10 +1,10 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-
 import { doc, updateDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import React, { useState } from 'react';
 import {
-  Dimensions,
+  Alert, Dimensions,
   Image,
   ImageBackground,
   Platform,
@@ -14,9 +14,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-} from 'react-native';
-import { auth, db } from '../../firebaseConfig';
+  View
+} from 'react-native'; // verifica que ya lo tengas
+import { auth, db, storage } from '../../firebaseConfig';
 import { useHora } from '../Hora';
 
 const { width, height } = Dimensions.get('window');
@@ -51,8 +51,25 @@ export default function CuestionarioScreen() {
       quality: 0.8,
     });
 
-    if (!result.canceled) {
-      setFotoPerfil(result.assets[0].uri);
+    if (result.canceled) return;
+
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const uri = result.assets[0].uri;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // Misma ruta que en perfil
+      const storageRef = ref(storage, `Perfiles/${user.uid}/imagen_perfil.jpg`);
+      await uploadBytesResumable(storageRef, blob);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      setFotoPerfil(downloadURL);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'No se pudo subir la foto');
     }
   };
 
@@ -67,6 +84,7 @@ export default function CuestionarioScreen() {
         genero: generoSeleccionado,
         estilo: estiloSeleccionado,
         clima: climaSeleccionado,
+        urlImagenPerfil: fotoPerfil || '',
       });
     }
     router.replace('/(tabs)/Home');
