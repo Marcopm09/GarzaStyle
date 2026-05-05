@@ -51,7 +51,7 @@ export default function HoraLocalScreen() {
   // Referencias para los FlatList
   const flatListRefs = useRef<{ [key: string]: FlatList<any> | null }>({});
 
-  const usuarioID = 'usuario1';
+  const [usuarioID, setUsuarioID] = useState<string>('');
 
   const secciones = [
     'Camisas / Playeras',
@@ -127,6 +127,9 @@ export default function HoraLocalScreen() {
       try {
         const user = auth.currentUser;
         if (!user) return;
+
+        setUsuarioID(user.uid);
+
         const docRef = doc(db, 'Usuarios', user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -140,6 +143,7 @@ export default function HoraLocalScreen() {
   }, []);
 
   useEffect(() => {
+    if (!usuarioID) return;
     const cargarImagenes = async () => {
       try {
         const nuevasImagenes: { [key: string]: string[] } = {};
@@ -173,7 +177,7 @@ export default function HoraLocalScreen() {
       }
     };
     cargarImagenes();
-  }, []);
+  }, [usuarioID]);
 
   const containerSize = isTablet ? wp(30) : isSmallDevice ? wp(35) : isMediumDevice ? wp(37) : wp(38);
 

@@ -16,7 +16,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { db } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
@@ -49,7 +49,7 @@ export default function GuardadosScreen() {
   const [conjuntos, setConjuntos] = useState<Conjunto[]>([]);
   const [nombreUsuario, setNombreUsuario] = useState<string>('');
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const usuarioID = 'usuario1';
+  const [usuarioID, setUsuarioID] = useState<string>('');
 
   const toggleMenu = () => {
     if (menuVisible) {
@@ -74,12 +74,21 @@ export default function GuardadosScreen() {
 
   useEffect(() => {
     cargarUsuario();
-    cargarConjuntos();
   }, []);
+
+  useEffect(() => {
+    if (!usuarioID) return; // ✅ Esperar UID
+    cargarConjuntos();
+  }, [usuarioID]); // ✅ Se ejecuta cuando el UID esté listo
 
   const cargarUsuario = async () => {
     try {
-      const docRef = doc(db, 'Usuarios', usuarioID);
+      const user = auth.currentUser; // ✅ Importar auth
+      if (!user) return;
+
+      setUsuarioID(user.uid); // ✅ Guardar UID real
+
+      const docRef = doc(db, 'Usuarios', user.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setNombreUsuario(docSnap.data().nombre);
@@ -269,14 +278,14 @@ export default function GuardadosScreen() {
               const accesorios = obtenerAccesorios(item.prendas.accesorios);
               const accesoriosIzquierda = accesorios.slice(0, 3);
               const accesoriosDerecha = accesorios.slice(3, 6);
-              
+
               return (
                 <View key={item.id} style={style.conjuntoCard}>
                   {/* Encabezado con nombre de usuario, conjunto y fecha */}
                   <View style={style.headerContainer}>
                     <View style={style.headerLeft}>
                       <Text style={style.nombreUsuarioText}>{nombreUsuario}</Text>
-                      
+
                       {editandoId === item.id ? (
                         <TextInput
                           style={style.nombreConjuntoInput}
@@ -293,8 +302,8 @@ export default function GuardadosScreen() {
                             }
                           }}
                           onBlur={() => {
-                            const nombreFinal = item.nombre && item.nombre.trim() !== '' 
-                              ? item.nombre 
+                            const nombreFinal = item.nombre && item.nombre.trim() !== ''
+                              ? item.nombre
                               : 'Sin Nombre';
                             actualizarNombreConjunto(item.id, nombreFinal);
                           }}
@@ -310,7 +319,7 @@ export default function GuardadosScreen() {
                         </TouchableOpacity>
                       )}
                     </View>
-                    
+
                     <View style={style.headerRight}>
                       <Text style={style.fechaText}>
                         {new Date(item.fecha.seconds * 1000).toLocaleDateString('es-MX', {
@@ -322,84 +331,84 @@ export default function GuardadosScreen() {
                     </View>
                   </View>
 
-{/* Contenedor principal con accesorios a los lados */}
-<View style={style.contenidoConAccesorios}>
-  {/* Accesorios izquierda - SIEMPRE RENDERIZA EL CONTENEDOR */}
-  <View style={style.accesoriosColumna}>
-    {accesoriosIzquierda.length > 0 ? (
-      accesoriosIzquierda.map((accesorio, index) => (
-        <View key={`izq-${index}`} style={style.accesorioBox}>
-          <Image 
-            source={{ uri: accesorio }} 
-            style={style.accesorioImage}
-          />
-        </View>
-      ))
-    ) : null}
-  </View>
+                  {/* Contenedor principal con accesorios a los lados */}
+                  <View style={style.contenidoConAccesorios}>
+                    {/* Accesorios izquierda - SIEMPRE RENDERIZA EL CONTENEDOR */}
+                    <View style={style.accesoriosColumna}>
+                      {accesoriosIzquierda.length > 0 ? (
+                        accesoriosIzquierda.map((accesorio, index) => (
+                          <View key={`izq-${index}`} style={style.accesorioBox}>
+                            <Image
+                              source={{ uri: accesorio }}
+                              style={style.accesorioImage}
+                            />
+                          </View>
+                        ))
+                      ) : null}
+                    </View>
 
-  {/* Contenedor de las 3 prendas principales en VERTICAL */}
-  <View style={style.prendasContainer}>
-    {/* Camisa */}
-    <View style={style.prendaBox}>
-      {item.prendas.camisa ? (
-        <Image 
-          source={{ uri: item.prendas.camisa }} 
-          style={style.prendaImage}
-        />
-      ) : (
-        <View style={style.emptyBox}>
-          <Text style={style.emptyText}>-</Text>
-        </View>
-      )}
-    </View>
+                    {/* Contenedor de las 3 prendas principales en VERTICAL */}
+                    <View style={style.prendasContainer}>
+                      {/* Camisa */}
+                      <View style={style.prendaBox}>
+                        {item.prendas.camisa ? (
+                          <Image
+                            source={{ uri: item.prendas.camisa }}
+                            style={style.prendaImage}
+                          />
+                        ) : (
+                          <View style={style.emptyBox}>
+                            <Text style={style.emptyText}>-</Text>
+                          </View>
+                        )}
+                      </View>
 
-    {/* Pantalón */}
-    <View style={style.prendaBox}>
-      {item.prendas.pantalon ? (
-        <Image 
-          source={{ uri: item.prendas.pantalon }} 
-          style={style.prendaImage}
-        />
-      ) : (
-        <View style={style.emptyBox}>
-          <Text style={style.emptyText}>-</Text>
-        </View>
-      )}
-    </View>
+                      {/* Pantalón */}
+                      <View style={style.prendaBox}>
+                        {item.prendas.pantalon ? (
+                          <Image
+                            source={{ uri: item.prendas.pantalon }}
+                            style={style.prendaImage}
+                          />
+                        ) : (
+                          <View style={style.emptyBox}>
+                            <Text style={style.emptyText}>-</Text>
+                          </View>
+                        )}
+                      </View>
 
-    {/* Zapatos */}
-    <View style={style.prendaBox}>
-      {item.prendas.zapatos ? (
-        <Image 
-          source={{ uri: item.prendas.zapatos }} 
-          style={style.prendaImage}
-        />
-      ) : (
-        <View style={style.emptyBox}>
-          <Text style={style.emptyText}>-</Text>
-        </View>
-      )}
-    </View>
-  </View>
+                      {/* Zapatos */}
+                      <View style={style.prendaBox}>
+                        {item.prendas.zapatos ? (
+                          <Image
+                            source={{ uri: item.prendas.zapatos }}
+                            style={style.prendaImage}
+                          />
+                        ) : (
+                          <View style={style.emptyBox}>
+                            <Text style={style.emptyText}>-</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
 
-  {/* Accesorios derecha - SIEMPRE RENDERIZA EL CONTENEDOR */}
-  <View style={style.accesoriosColumna}>
-    {accesoriosDerecha.length > 0 ? (
-      accesoriosDerecha.map((accesorio, index) => (
-        <View key={`der-${index}`} style={style.accesorioBox}>
-          <Image 
-            source={{ uri: accesorio }} 
-            style={style.accesorioImage}
-          />
-        </View>
-      ))
-    ) : null}
-  </View>
-</View>
+                    {/* Accesorios derecha - SIEMPRE RENDERIZA EL CONTENEDOR */}
+                    <View style={style.accesoriosColumna}>
+                      {accesoriosDerecha.length > 0 ? (
+                        accesoriosDerecha.map((accesorio, index) => (
+                          <View key={`der-${index}`} style={style.accesorioBox}>
+                            <Image
+                              source={{ uri: accesorio }}
+                              style={style.accesorioImage}
+                            />
+                          </View>
+                        ))
+                      ) : null}
+                    </View>
+                  </View>
 
                   {/* Botón eliminar */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={style.deleteButtonContainer}
                     onPress={() => eliminarConjunto(item.id)}
                   >
@@ -410,7 +419,7 @@ export default function GuardadosScreen() {
                   </TouchableOpacity>
 
                   {/* Botón compartir */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={style.shareButtonContainer}
                     onPress={() => compartirConjunto(item.id)}
                   >

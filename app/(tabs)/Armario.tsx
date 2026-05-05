@@ -17,7 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { db, storage } from '../../firebaseConfig';
+import { auth, db, storage } from '../../firebaseConfig';
 import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
@@ -34,7 +34,7 @@ const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
   const hora = useHora();
-  const clima = useClima(); 
+  const clima = useClima();
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [seccionSeleccionada, setSeccionSeleccionada] = useState<string>('');
@@ -52,10 +52,20 @@ export default function HoraLocalScreen() {
     'Tenis / Zapatos': [],
   });
 
+  const [usuarioID, setUsuarioID] = useState<string>('');
+
   const [mensajeVisible, setMensajeVisible] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
   useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setUsuarioID(user.uid);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!usuarioID) return;
     const cargarImagenes = async () => {
       try {
         const secciones = [
@@ -69,7 +79,7 @@ export default function HoraLocalScreen() {
         for (const seccion of secciones) {
           const q = query(
             collection(db, 'Prendas'),
-            where('usuarioID', '==', 'usuario1'),
+            where('usuarioID', '==', usuarioID),
             where('seccion', '==', seccion)
           );
           const snapshot = await getDocs(q);
@@ -86,7 +96,7 @@ export default function HoraLocalScreen() {
     };
 
     cargarImagenes();
-  }, []);
+  }, [usuarioID]);
 
   const toggleMenu = () => {
     setMenuVisible(!menuVisible);
@@ -339,7 +349,7 @@ export default function HoraLocalScreen() {
               style={style.modalButton}
               onPress={() => {
                 setModalVisible(false);
-                subirImagen('usuario1', seccionSeleccionada);
+                subirImagen(usuarioID, seccionSeleccionada);
               }}
             >
               <Text style={style.textoModalButton}>Galería</Text>
@@ -349,7 +359,7 @@ export default function HoraLocalScreen() {
               style={style.modalButton}
               onPress={() => {
                 setModalVisible(false);
-                tomarFoto('usuario1', seccionSeleccionada);
+                tomarFoto(usuarioID, seccionSeleccionada);
               }}
             >
               <Text style={style.textoModalButton}>Cámara</Text>
