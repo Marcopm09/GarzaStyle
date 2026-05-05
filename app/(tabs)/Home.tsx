@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import { addDoc, collection, doc, getDoc, getDocs, query, Timestamp, where } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
+import { auth } from '../../firebaseConfig';
+
 import {
   Alert,
   Animated,
@@ -29,7 +31,7 @@ const isMediumDevice = width >= 360 && width < 400;
 const isTablet = width >= 768;
 
 export default function HoraLocalScreen() {
-  
+
   const translateX = useRef(new Animated.Value(screenWidth)).current;
   const translateXAccesorios = useRef(new Animated.Value(-wp(100))).current;
   const [menuVisible, setMenuVisible] = useState(false);
@@ -45,10 +47,10 @@ export default function HoraLocalScreen() {
     'Pantalones / Shorts / Faldas': 0,
     'Tenis / Zapatos': 0,
   });
-  
+
   // Referencias para los FlatList
   const flatListRefs = useRef<{ [key: string]: FlatList<any> | null }>({});
-  
+
   const usuarioID = 'usuario1';
 
   const secciones = [
@@ -63,10 +65,10 @@ export default function HoraLocalScreen() {
         toValue: screenWidth,
         duration: 300,
         useNativeDriver: true,
-      }).start(() => { 
-        setTimeout(() => { 
-          setMenuVisible(false); 
-        }, 10); 
+      }).start(() => {
+        setTimeout(() => {
+          setMenuVisible(false);
+        }, 10);
       });
     } else {
       setMenuVisible(true);
@@ -78,30 +80,30 @@ export default function HoraLocalScreen() {
     }
   };
 
-const toggleAccesorios = () => {
-  if (accesoriosVisible) {
-    Animated.timing(translateXAccesorios, {
-      toValue: -wp(100),
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-    // Retrasar el setAccesoriosVisible para que termine la animación
-    setTimeout(() => {
-      setAccesoriosVisible(false);
-    }, 300);  // Mismo tiempo que la duración de la animación
-  } else {
-    setAccesoriosVisible(true);
-    Animated.timing(translateXAccesorios, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }
-};
+  const toggleAccesorios = () => {
+    if (accesoriosVisible) {
+      Animated.timing(translateXAccesorios, {
+        toValue: -wp(100),
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      // Retrasar el setAccesoriosVisible para que termine la animación
+      setTimeout(() => {
+        setAccesoriosVisible(false);
+      }, 300);  // Mismo tiempo que la duración de la animación
+    } else {
+      setAccesoriosVisible(true);
+      Animated.timing(translateXAccesorios, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
 
   const seleccionarAccesorio = (imagen: string) => {
     const indiceExistente = accesoriosSeleccionados.indexOf(imagen);
-    
+
     if (indiceExistente !== -1) {
       // Si ya está seleccionado, lo quitamos
       setAccesoriosSeleccionados(prev => prev.filter(item => item !== imagen));
@@ -123,13 +125,15 @@ const toggleAccesorios = () => {
   useEffect(() => {
     const cargarUsuario = async () => {
       try {
-        const docRef = doc(db, 'Usuarios', usuarioID);
+        const user = auth.currentUser;
+        if (!user) return;
+        const docRef = doc(db, 'Usuarios', user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setNombreUsuario(docSnap.data().nombre);
         }
       } catch (error) {
-        console.error('Error cargando usuario:', JSON.stringify(error, null, 2));
+        console.error('Error cargando usuario:', error);
       }
     };
     cargarUsuario();
@@ -139,7 +143,7 @@ const toggleAccesorios = () => {
     const cargarImagenes = async () => {
       try {
         const nuevasImagenes: { [key: string]: string[] } = {};
-        
+
         // Cargar imágenes de las secciones principales
         await Promise.all(
           secciones.map(async (seccion) => {
@@ -152,7 +156,7 @@ const toggleAccesorios = () => {
             nuevasImagenes[seccion] = snapshot.docs.map(doc => doc.data().fotoURL || '');
           })
         );
-        
+
         // Cargar imágenes de accesorios
         const qAccesorios = query(
           collection(db, 'Prendas'),
@@ -161,7 +165,7 @@ const toggleAccesorios = () => {
         );
         const snapshotAccesorios = await getDocs(qAccesorios);
         const accesorios = snapshotAccesorios.docs.map(doc => doc.data().fotoURL || '');
-        
+
         setImagenesPorSeccion(nuevasImagenes);
         setImagenesAccesorios(accesorios);
       } catch (error) {
@@ -184,15 +188,15 @@ const toggleAccesorios = () => {
   const siguienteImagen = (seccion: string) => {
     const imagenes = imagenesPorSeccion[seccion];
     if (!imagenes || imagenes.length === 0) return;
-    
+
     const indiceActual = indicesVisibles[seccion];
     const nuevoIndice = (indiceActual + 1) % imagenes.length;
-    
+
     setIndicesVisibles(prev => ({
       ...prev,
       [seccion]: nuevoIndice
     }));
-    
+
     flatListRefs.current[seccion]?.scrollToIndex({
       index: nuevoIndice,
       animated: true
@@ -203,15 +207,15 @@ const toggleAccesorios = () => {
   const anteriorImagen = (seccion: string) => {
     const imagenes = imagenesPorSeccion[seccion];
     if (!imagenes || imagenes.length === 0) return;
-    
+
     const indiceActual = indicesVisibles[seccion];
     const nuevoIndice = indiceActual === 0 ? imagenes.length - 1 : indiceActual - 1;
-    
+
     setIndicesVisibles(prev => ({
       ...prev,
       [seccion]: nuevoIndice
     }));
-    
+
     flatListRefs.current[seccion]?.scrollToIndex({
       index: nuevoIndice,
       animated: true
@@ -221,23 +225,23 @@ const toggleAccesorios = () => {
   const guardarConjunto = async () => {
     try {
       const prendas: { [key: string]: string | null } = {};
-      
+
       secciones.forEach((seccion) => {
         const indice = indicesVisibles[seccion];
         const imagenes = imagenesPorSeccion[seccion];
-        
+
         let nombreCorto = '';
         if (seccion === 'Camisas / Playeras') nombreCorto = 'camisa';
         else if (seccion === 'Pantalones / Shorts / Faldas') nombreCorto = 'pantalon';
         else if (seccion === 'Tenis / Zapatos') nombreCorto = 'zapatos';
-        
+
         prendas[nombreCorto] = imagenes && imagenes[indice] ? imagenes[indice] : null;
       });
 
       prendas['accesorios'] = accesoriosSeleccionados.length > 0 ? JSON.stringify(accesoriosSeleccionados) : null;
 
       const tienePrendas = Object.values(prendas).some(url => url !== null);
-      
+
       if (!tienePrendas) {
         Alert.alert('Error', 'No hay prendas para guardar');
         return;
@@ -252,9 +256,9 @@ const toggleAccesorios = () => {
 
       // Reiniciar accesorios seleccionados después de guardar
       setAccesoriosSeleccionados([]);
-      
+
       Alert.alert('¡Éxito!', 'Conjunto guardado correctamente');
-      
+
     } catch (error) {
       console.error('Error guardando conjunto:', error);
       Alert.alert('Error', 'No se pudo guardar el conjunto');
@@ -264,18 +268,18 @@ const toggleAccesorios = () => {
   return (
     <View style={style.container}>
       <StatusBar hidden={true} />
-      
-      <Image 
-        source={require('@/assets/images/Logo_GarzaStyle.png')} 
-        style={style.GarzaLogo} 
+
+      <Image
+        source={require('@/assets/images/Logo_GarzaStyle.png')}
+        style={style.GarzaLogo}
       />
 
       <Text style={style.subtitle}>¡Bienvenido {nombreUsuario}!</Text>
       <Text style={style.horaTexto}>{hora}</Text>
-      <Text style={style.climaTexto}>{clima}</Text> 
+      <Text style={style.climaTexto}>{clima}</Text>
 
       {/* Pestaña de Accesorios con Badge */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={style.pestanaAccesorios}
         onPress={toggleAccesorios}
       >
@@ -290,8 +294,8 @@ const toggleAccesorios = () => {
       {/* Ventana flotante de Accesorios */}
       {accesoriosVisible && (
         <>
-          <Pressable 
-            style={style.overlayAccesorios} 
+          <Pressable
+            style={style.overlayAccesorios}
             onPress={toggleAccesorios}
           />
           <Animated.View
@@ -311,7 +315,7 @@ const toggleAccesorios = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
+            <ScrollView
               style={style.scrollAccesorios}
               showsVerticalScrollIndicator={false}
             >
@@ -320,10 +324,10 @@ const toggleAccesorios = () => {
                   imagenesAccesorios.map((imagen, index) => {
                     const numeroSeleccion = obtenerNumeroAccesorio(imagen);
                     const estaSeleccionado = numeroSeleccion !== null;
-                    
+
                     return (
                       <View key={index} style={style.accesorioItemContainer}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={[
                             style.accesorioItem,
                             estaSeleccionado && style.accesorioSeleccionado
@@ -331,7 +335,7 @@ const toggleAccesorios = () => {
                           activeOpacity={0.7}
                           onPress={() => seleccionarAccesorio(imagen)}
                         >
-                          <Image 
+                          <Image
                             source={{ uri: imagen }}
                             style={style.accesorioImagen}
                           />
@@ -357,7 +361,7 @@ const toggleAccesorios = () => {
         </>
       )}
 
-      <ScrollView 
+      <ScrollView
         style={style.carouselContainer}
         contentContainerStyle={style.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -365,17 +369,17 @@ const toggleAccesorios = () => {
         {secciones.map((seccion, idx) => {
           const imageSize = obtenerTamanoImagen(seccion);
           const tieneImagenes = imagenesPorSeccion[seccion] && imagenesPorSeccion[seccion].length > 0;
-          
+
           return (
             <View key={idx} style={style.seccionWrapper}>
               {/* Flecha Izquierda */}
               {tieneImagenes && imagenesPorSeccion[seccion].length > 1 && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={style.flechaIzquierda}
                   onPress={() => anteriorImagen(seccion)}
                 >
-                  <Image 
-                    source={require('@/assets/images/Flecha.png')} 
+                  <Image
+                    source={require('@/assets/images/Flecha.png')}
                     style={style.flechaImagenIzquierda}
                   />
                 </TouchableOpacity>
@@ -384,7 +388,7 @@ const toggleAccesorios = () => {
               {/* Contenedor de imagen */}
               <View style={[style.outerContainer, { width: containerSize, height: containerSize }]}>
                 <FlatList
-                  ref={(ref) => { 
+                  ref={(ref) => {
                     if (ref) {
                       flatListRefs.current[seccion] = ref;
                     }
@@ -408,9 +412,9 @@ const toggleAccesorios = () => {
                   onScrollToIndexFailed={(info) => {
                     const wait = new Promise(resolve => setTimeout(resolve, 500));
                     wait.then(() => {
-                      flatListRefs.current[seccion]?.scrollToIndex({ 
-                        index: info.index, 
-                        animated: true 
+                      flatListRefs.current[seccion]?.scrollToIndex({
+                        index: info.index,
+                        animated: true
                       });
                     });
                   }}
@@ -421,7 +425,7 @@ const toggleAccesorios = () => {
                           source={{ uri: item }}
                           style={[
                             style.carouselImageSingle,
-                            { 
+                            {
                               width: imageSize,
                               height: imageSize
                             }
@@ -429,10 +433,10 @@ const toggleAccesorios = () => {
                         />
                       </View>
                     ) : (
-                      <View 
+                      <View
                         style={[
                           style.emptyBoxSingle,
-                          { 
+                          {
                             width: containerSize,
                             height: containerSize
                           }
@@ -448,12 +452,12 @@ const toggleAccesorios = () => {
 
               {/* Flecha Derecha */}
               {tieneImagenes && imagenesPorSeccion[seccion].length > 1 && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={style.flechaDerecha}
                   onPress={() => siguienteImagen(seccion)}
                 >
-                  <Image 
-                    source={require('@/assets/images/Flecha.png')} 
+                  <Image
+                    source={require('@/assets/images/Flecha.png')}
                     style={style.flechaImagenDerecha}
                   />
                 </TouchableOpacity>
@@ -463,7 +467,7 @@ const toggleAccesorios = () => {
         })}
       </ScrollView>
 
-      <TouchableOpacity style={[style.menuButton, {zIndex: accesoriosVisible ? 50 : 200}]} onPress={toggleMenu}>
+      <TouchableOpacity style={[style.menuButton, { zIndex: accesoriosVisible ? 50 : 200 }]} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
       </TouchableOpacity>
 
@@ -484,7 +488,7 @@ const toggleAccesorios = () => {
               },
             ]}
             onStartShouldSetResponder={() => true}
-          >       
+          >
             <TouchableOpacity onPress={() => router.push('/Armario')}>
               <Image source={require('@/assets/images/Gancho.png')} style={style.menuImage} />
             </TouchableOpacity>
@@ -512,11 +516,11 @@ const toggleAccesorios = () => {
         <TouchableOpacity activeOpacity={0.7}>
           <Image source={require('@/assets/images/compartir.png')} style={style.menuImageRedes} />
         </TouchableOpacity>
-        
+
         <TouchableOpacity activeOpacity={0.7} onPress={guardarConjunto}>
           <Image source={require('@/assets/images/corazon.png')} style={style.menuImageRedes} />
         </TouchableOpacity>
-        
+
         <TouchableOpacity activeOpacity={0.7}>
           <Image source={require('@/assets/images/enviar.png')} style={style.menuImageRedes} />
         </TouchableOpacity>

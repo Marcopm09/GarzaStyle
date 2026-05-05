@@ -1,8 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { auth, db } from "../firebaseConfig";
+import { router, Stack } from "expo-router";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { router, Stack } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -17,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { auth, db } from "../firebaseConfig";
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
@@ -49,7 +48,8 @@ export default function RegisterScreen() {
         email: user.email,
         uid: user.uid,
         createdAt: new Date(),
-        rol: "estudiante"
+        rol: "estudiante",
+        cuestionarioCompletado: false
       });
 
       // 5. Envío de correo de verificación

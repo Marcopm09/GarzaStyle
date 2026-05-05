@@ -1,19 +1,22 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+
+import { doc, updateDoc } from 'firebase/firestore';
 import {
-    Dimensions,
-    Image,
-    ImageBackground,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  Image,
+  ImageBackground,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { auth, db } from '../../firebaseConfig';
 import { useHora } from '../Hora';
 
 const { width, height } = Dimensions.get('window');
@@ -53,13 +56,25 @@ export default function CuestionarioScreen() {
     }
   };
 
-  const handleContinuar = () => {
+  const handleContinuar = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      await updateDoc(doc(db, 'Usuarios', user.uid), {
+        cuestionarioCompletado: true,
+        nombre: nombre,
+        estatura: estatura,
+        peso: peso,
+        genero: generoSeleccionado,
+        estilo: estiloSeleccionado,
+        clima: climaSeleccionado,
+      });
+    }
     router.replace('/(tabs)/Home');
   };
 
   return (
     <ImageBackground
-      
+
       source={require('@/assets/images/background3.png')}
       style={styles.background}
       resizeMode="cover"

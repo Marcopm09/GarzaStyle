@@ -1,8 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { auth } from "../firebaseConfig";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { router, Stack } from "expo-router";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from "react";
+import { db } from '../firebaseConfig';
+
 import {
   Alert,
   Dimensions,
@@ -16,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { auth } from "../firebaseConfig";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -43,16 +46,21 @@ export default function LoginScreen() {
 
       // 3. Si todo está bien, guardar sesión y entrar
       await AsyncStorage.setItem("isLoggedIn", "true");
-      router.replace("/(tabs)/Home");
+      const docSnap = await getDoc(doc(db, 'Usuarios', user.uid));
+      if (docSnap.data()?.cuestionarioCompletado) {
+        router.replace('/(tabs)/Home');
+      } else {
+        router.replace('/(tabs)/cuestionario');
+      }
 
     } catch (error: any) {
       console.error(error);
       let message = "Credenciales incorrectas o error de conexión.";
-      
+
       if (error.code === "auth/user-not-found") message = "No existe una cuenta con este correo.";
       if (error.code === "auth/wrong-password") message = "La contraseña es incorrecta.";
       if (error.code === "auth/invalid-credential") message = "Correo o contraseña no válidos.";
-      
+
       Alert.alert("Error de Inicio", message);
     }
   };

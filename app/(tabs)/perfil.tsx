@@ -2,9 +2,11 @@
 
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
+    Alert, Dimensions,
     Image,
     Platform,
     Pressable,
@@ -14,8 +16,9 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
+import { auth, db, storage } from '../../firebaseConfig';
 import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
@@ -33,23 +36,89 @@ export default function PerfilScreen() {
     const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
     // Estos valores vendrían del cuestionario / Firestore
-    const [nombre, setNombre] = useState('Ashley Ramos');
-    const [estatura, setEstatura] = useState('165');
-    const [genero, setGenero] = useState('Femenino');
-    const [peso, setPeso] = useState('58');
-    const [estilo, setEstilo] = useState('Casual');
-    const [clima, setClima] = useState('Templado');
+    const [nombre, setNombre] = useState('');
+    const [estatura, setEstatura] = useState('');
+    const [genero, setGenero] = useState('');
+    const [peso, setPeso] = useState('');
+    const [estilo, setEstilo] = useState('');
+    const [clima, setClima] = useState('');
+
+    useEffect(() => {
+        const cargarPerfil = async () => {
+            const user = auth.currentUser;
+            if (!user) return;
+            const docSnap = await getDoc(doc(db, 'Usuarios', user.uid));
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setNombre(data.nombre || '');
+                setEstatura(data.estatura || '');
+                setGenero(data.genero || '');
+                setPeso(data.peso || '');
+                setEstilo(data.estilo || '');
+                setClima(data.clima || '');
+                setFotoPerfil(data.urlImagenPerfil || null);
+            }
+        };
+        cargarPerfil();
+    }, []);
+
+    // Función para guardar cambios del perfil
+    const guardarCambios = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+        try {
+            await updateDoc(doc(db, 'Usuarios', user.uid), {
+                nombre,
+                estatura,
+                genero,
+                peso,
+                estilo,
+                clima,
+            });
+            Alert.alert('¡Éxito!', 'Perfil actualizado correctamente');
+        } catch (error) {
+            Alert.alert('Error', 'No se pudo actualizar el perfil');
+        }
+    };
 
     const seleccionarFoto = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') return;
+
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
         });
-        if (!result.canceled) setFotoPerfil(result.assets[0].uri);
+
+        if (result.canceled) return;
+
+        try {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const uri = result.assets[0].uri;
+            const response = await fetch(uri);
+            const blob = await response.blob();
+
+            //  Ruta: Perfiles/UID/imagen_perfil.jpg
+            const storageRef = ref(storage, `Perfiles/${user.uid}/imagen_perfil.jpg`);
+            await uploadBytesResumable(storageRef, blob);
+
+            const downloadURL = await getDownloadURL(storageRef);
+
+            // Guardar URL en Firestore
+            await updateDoc(doc(db, 'Usuarios', user.uid), {
+                urlImagenPerfil: downloadURL,
+            });
+
+            setFotoPerfil(downloadURL);
+            Alert.alert( 'Foto de perfil actualizada');
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'No se pudo subir la foto');
+        }
     };
 
     return (
@@ -70,7 +139,7 @@ export default function PerfilScreen() {
                 </View>
             </View>
 
-            <Text style={styles.bienvenidaTexto}>BIENVENIDA {nombre.toUpperCase()}!</Text>
+            <Text style={styles.bienvenidaTexto}>BIENVENIDO {nombre.toUpperCase()}!</Text>
 
             {/* ── MENÚ ── */}
             <TouchableOpacity style={styles.menuButton} onPress={() => setMenuVisible(!menuVisible)}>
@@ -125,11 +194,11 @@ export default function PerfilScreen() {
 
                 {/* ── BOTONES ESTADÍSTICAS ── */}
                 <View style={styles.statsRow}>
-                    <TouchableOpacity style={styles.statBtn}>
+                    <TouchableOpacity style={styles.statBtn} onPress={guardarCambios}>
                         <Text style={styles.statTexto}>Total de{'\n'}prendas</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.statBtn}>
-                        <Text style={styles.statTexto}>outfits{'\n'}guardados</Text>
+                    <TouchableOpacity style={styles.statBtn} onPress={guardarCambios}>
+                        <Text style={styles.statTexto}>Guardar{'\n'}cambios</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -272,7 +341,7 @@ const styles = StyleSheet.create({
         padding: wp(2),
         borderRadius: wp(2),
     },
-    
+
     menuIcon: {
         fontSize: isTablet ? wp(5) : wp(7),
         color: '#000000',
