@@ -21,6 +21,7 @@ import {
 import { db } from '../../firebaseConfig';
 import { useClima } from '../Clima';
 import { useHora } from '../Hora';
+
 const { width, height } = Dimensions.get('window');
 const screenWidth = Dimensions.get('window').width;
 
@@ -47,11 +48,11 @@ export default function HoraLocalScreen() {
     'Pantalones / Shorts / Faldas': 0,
     'Tenis / Zapatos': 0,
   });
+  const [usuarioID, setUsuarioID] = useState<string>('');
+  const [cargandoSugerencia, setCargandoSugerencia] = useState(false);
 
   // Referencias para los FlatList
   const flatListRefs = useRef<{ [key: string]: FlatList<any> | null }>({});
-
-  const [usuarioID, setUsuarioID] = useState<string>('');
 
   const secciones = [
     'Camisas / Playeras',
@@ -87,10 +88,9 @@ export default function HoraLocalScreen() {
         duration: 300,
         useNativeDriver: true,
       }).start();
-      // Retrasar el setAccesoriosVisible para que termine la animación
       setTimeout(() => {
         setAccesoriosVisible(false);
-      }, 300);  // Mismo tiempo que la duración de la animación
+      }, 300);
     } else {
       setAccesoriosVisible(true);
       Animated.timing(translateXAccesorios, {
@@ -105,10 +105,8 @@ export default function HoraLocalScreen() {
     const indiceExistente = accesoriosSeleccionados.indexOf(imagen);
 
     if (indiceExistente !== -1) {
-      // Si ya está seleccionado, lo quitamos
       setAccesoriosSeleccionados(prev => prev.filter(item => item !== imagen));
     } else {
-      // Si no está seleccionado, verificamos si hay espacio
       if (accesoriosSeleccionados.length >= 6) {
         Alert.alert('Límite alcanzado', 'Solo puedes seleccionar hasta 6 accesorios');
         return;
@@ -148,7 +146,6 @@ export default function HoraLocalScreen() {
       try {
         const nuevasImagenes: { [key: string]: string[] } = {};
 
-        // Cargar imágenes de las secciones principales
         await Promise.all(
           secciones.map(async (seccion) => {
             const q = query(
@@ -161,7 +158,6 @@ export default function HoraLocalScreen() {
           })
         );
 
-        // Cargar imágenes de accesorios
         const qAccesorios = query(
           collection(db, 'Prendas'),
           where('usuarioID', '==', usuarioID),
@@ -188,7 +184,6 @@ export default function HoraLocalScreen() {
     return containerSize;
   };
 
-  // Función para ir a la siguiente imagen
   const siguienteImagen = (seccion: string) => {
     const imagenes = imagenesPorSeccion[seccion];
     if (!imagenes || imagenes.length === 0) return;
@@ -207,7 +202,6 @@ export default function HoraLocalScreen() {
     });
   };
 
-  // Función para ir a la imagen anterior
   const anteriorImagen = (seccion: string) => {
     const imagenes = imagenesPorSeccion[seccion];
     if (!imagenes || imagenes.length === 0) return;
@@ -258,15 +252,113 @@ export default function HoraLocalScreen() {
         nombre: 'Sin nombre',
       });
 
-      // Reiniciar accesorios seleccionados después de guardar
       setAccesoriosSeleccionados([]);
-
       Alert.alert('¡Éxito!', 'Conjunto guardado correctamente');
 
     } catch (error) {
       console.error('Error guardando conjunto:', error);
       Alert.alert('Error', 'No se pudo guardar el conjunto');
     }
+  };
+
+  // Guarda el último outfit generado para no repetirlo
+  const ultimoOutfitRef = useRef<{ camisa: number; pantalon: number; zapatos: number } | null>(null);
+
+  const sugerirOutfit = () => {
+    if (cargandoSugerencia) return;
+
+    const sinPrendas = secciones.every(
+      s => !imagenesPorSeccion[s] || imagenesPorSeccion[s].length === 0
+    );
+    if (sinPrendas) {
+      Alert.alert('Sin prendas', 'Agrega prendas a tu armario primero');
+      return;
+    }
+
+    setCargandoSugerencia(true);
+
+    // --- Detectar clima y hora ---
+    const climaTexto = (clima || '').toLowerCase();
+    const horaTexto  = (hora  || '').toLowerCase();
+
+    let horaNum = 12;
+    const matchHora = horaTexto.match(/(\d{1,2}):(\d{2})/);
+    if (matchHora) {
+      horaNum = parseInt(matchHora[1], 10);
+      if (horaTexto.includes('pm') && horaNum !== 12) horaNum += 12;
+      if (horaTexto.includes('am') && horaNum === 12) horaNum = 0;
+    }
+
+    const esNoche = horaNum >= 19 || horaNum < 6;
+    const esFrio  = climaTexto.includes('frío') || climaTexto.includes('frio') ||
+                    climaTexto.includes('fresco') || climaTexto.includes('lluv') ||
+                    climaTexto.includes('nublado') || climaTexto.includes('viento');
+
+    const totalCamisas    = imagenesPorSeccion['Camisas / Playeras']?.length || 0;
+    const totalPantalones = imagenesPorSeccion['Pantalones / Shorts / Faldas']?.length || 0;
+    const totalZapatos    = imagenesPorSeccion['Tenis / Zapatos']?.length || 0;
+
+    // --- Elegir índice aleatorio evitando repetir el anterior ---
+    const aleatorio = (total: number, anterior: number): number => {
+      if (total <= 1) return 0;
+      let nuevo = anterior;
+      let intentos = 0;
+      while (nuevo === anterior && intentos < 10) {
+        nuevo = Math.floor(Math.random() * total);
+        intentos++;
+      }
+      return nuevo;
+    };
+
+    const ultimo = ultimoOutfitRef.current;
+    const indiceCamisa   = aleatorio(totalCamisas,    ultimo?.camisa   ?? -1);
+    const indicePantalon = aleatorio(totalPantalones, ultimo?.pantalon ?? -1);
+    const indiceZapatos  = aleatorio(totalZapatos,    ultimo?.zapatos  ?? -1);
+
+    // Guardar para la próxima llamada
+    ultimoOutfitRef.current = { camisa: indiceCamisa, pantalon: indicePantalon, zapatos: indiceZapatos };
+
+    // --- Accesorios aleatorios (de noche o frío, hasta 2) ---
+    const accesoriosSugeridos: string[] = [];
+    if (imagenesAccesorios.length > 0 && (esNoche || esFrio)) {
+      const indices = Array.from({ length: imagenesAccesorios.length }, (_, i) => i)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 2);
+      indices.forEach(i => accesoriosSugeridos.push(imagenesAccesorios[i]));
+    }
+
+    // --- Aplicar índices con animación ---
+    const nuevosIndices: { [key: string]: number } = {};
+
+    const mapeo = [
+      { seccion: 'Camisas / Playeras',           indice: indiceCamisa   },
+      { seccion: 'Pantalones / Shorts / Faldas', indice: indicePantalon },
+      { seccion: 'Tenis / Zapatos',              indice: indiceZapatos  },
+    ];
+
+    mapeo.forEach(({ seccion, indice }) => {
+      const total = imagenesPorSeccion[seccion]?.length || 0;
+      if (total === 0) return;
+      const indiceFinal = Math.max(0, Math.min(indice, total - 1));
+      nuevosIndices[seccion] = indiceFinal;
+      flatListRefs.current[seccion]?.scrollToIndex({ index: indiceFinal, animated: true });
+    });
+
+    setIndicesVisibles(prev => ({ ...prev, ...nuevosIndices }));
+
+    if (accesoriosSugeridos.length > 0) {
+      setAccesoriosSeleccionados(accesoriosSugeridos);
+    }
+
+    // Mensaje según contexto
+    let mensaje = '¡Aquí tienes una nueva combinación! ';
+    if (esFrio)  mensaje = 'Hace frío hoy, outfit abrigado sugerido. ';
+    if (esNoche) mensaje = 'Noche perfecta para este outfit. ';
+
+    setTimeout(() => {
+      Alert.alert(' Outfit sugerido', mensaje);
+      setCargandoSugerencia(false);
+    }, 600); // pequeña pausa para que se vea la animación de scroll
   };
 
   return (
@@ -517,10 +609,19 @@ export default function HoraLocalScreen() {
       )}
 
       <View style={style.menuRedes}>
-        <TouchableOpacity activeOpacity={0.7}>
-          <Image source={require('@/assets/images/compartir.png')} style={style.menuImageRedes} />
+        {/* Botón compartir → Sugerir outfit con IA */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={sugerirOutfit}
+          disabled={cargandoSugerencia}
+        >
+          <Image
+            source={require('@/assets/images/compartir.png')}
+            style={[style.menuImageRedes, cargandoSugerencia && { opacity: 0.4 }]}
+          />
         </TouchableOpacity>
 
+        {/* Botón guardar conjunto */}
         <TouchableOpacity activeOpacity={0.7} onPress={guardarConjunto}>
           <Image source={require('@/assets/images/corazon.png')} style={style.menuImageRedes} />
         </TouchableOpacity>
@@ -832,13 +933,12 @@ const style = StyleSheet.create({
     height: isSmallDevice ? wp(14) : isTablet ? wp(12) : wp(17),
     resizeMode: 'contain',
   },
-
   climaTexto: {
     fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : isTablet ? 17 : 15,
     fontWeight: '600',
     color: 'rgb(0, 0, 0)',
     position: 'absolute',
-    top: Platform.OS === 'ios' ? hp(9) : hp(8),  // ligeramente abajo de la hora
+    top: Platform.OS === 'ios' ? hp(9) : hp(8),
     right: wp(5),
   },
 });
