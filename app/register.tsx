@@ -2,6 +2,8 @@ import { router, Stack } from "expo-router";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
+import { Image } from "react-native";
+
 import {
   Alert,
   Dimensions,
@@ -20,6 +22,7 @@ import { auth, db } from "../firebaseConfig";
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const handleRegister = async () => {
     // 1. Validación de campos obligatorios
@@ -32,7 +35,7 @@ export default function RegisterScreen() {
     const uaehDomain = "@uaeh.edu.mx";
     if (!email.endsWith(uaehDomain)) {
       Alert.alert(
-        "Acceso Restringido", 
+        "Acceso Restringido",
         "Debes usar tu correo institucional de la UAEH para registrarte."
       );
       return;
@@ -73,7 +76,7 @@ export default function RegisterScreen() {
     } catch (error: any) {
       console.error(error);
       let message = "No se pudo completar el registro.";
-      
+
       if (error.code === "auth/email-already-in-use") {
         message = "Este correo institucional ya está registrado.";
       } else if (error.code === "auth/weak-password") {
@@ -81,7 +84,7 @@ export default function RegisterScreen() {
       } else if (error.code === "auth/invalid-email") {
         message = "El formato del correo no es válido.";
       }
-      
+
       Alert.alert("Error de Registro", message);
     }
   };
@@ -141,14 +144,23 @@ export default function RegisterScreen() {
                 autoCapitalize="none"
               />
 
-              <TextInput
-                placeholder="Contraseña"
-                placeholderTextColor="#828282ff"
-                value={password}
-                secureTextEntry
-                onChangeText={setPassword}
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <TextInput
+                  placeholder="Contraseña"
+                  placeholderTextColor="#828282ff"
+                  value={password}
+                  secureTextEntry={!mostrarPassword}
+                  onChangeText={setPassword}
+                  style={styles.inputPassword}
+                />
+
+                <TouchableOpacity onPress={() => setMostrarPassword(!mostrarPassword)}>
+                  <Image
+                    source={{ uri: "https://cdn-icons-png.flaticon.com/512/159/159604.png" }}
+                    style={{ width: 30, height: 30 }}
+                  />
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity style={styles.button} onPress={handleRegister}>
                 <Text style={styles.buttonText}>REGISTRAR</Text>
@@ -224,5 +236,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 14,
     textDecorationLine: "underline",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+
+  inputPassword: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+
+  icono: {
+    width: 22,
+    height: 22,
+    resizeMode: "contain",
   },
 });

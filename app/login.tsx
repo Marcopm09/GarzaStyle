@@ -3,6 +3,7 @@ import { router, Stack } from "expo-router";
 import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from 'firebase/firestore';
 import React, { useState } from "react";
+import { Image } from "react-native";
 import { db } from '../firebaseConfig';
 
 import {
@@ -23,6 +24,7 @@ import { auth } from "../firebaseConfig";
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -132,14 +134,23 @@ export default function LoginScreen() {
                 autoCapitalize="none"
               />
 
-              <TextInput
-                placeholder="Contraseña"
-                placeholderTextColor="#828282ff"
-                value={password}
-                secureTextEntry
-                onChangeText={setPassword}
-                style={styles.input}
-              />
+              <View style={styles.inputContainer}>
+                <TextInput
+                  placeholder="Contraseña"
+                  placeholderTextColor="#828282ff"
+                  value={password}
+                  secureTextEntry={!mostrarPassword}
+                  onChangeText={setPassword}
+                  style={styles.inputPassword}
+                />
+
+                <TouchableOpacity onPress={() => setMostrarPassword(!mostrarPassword)}>
+                  <Image
+                    source={{ uri: "https://cdn-icons-png.flaticon.com/512/159/159604.png" }}
+                    style={{ width: 30, height: 30 }}
+                  />
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity onPress={handleForgotPassword}>
                 <Text style={styles.link}>¿OLVIDASTE TU CONTRASEÑA?</Text>
@@ -219,5 +230,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginVertical: 8,
     textDecorationLine: "underline",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+
+  inputPassword: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+
+  icono: {
+    width: 22,
+    height: 22,
+    resizeMode: "contain",
   },
 });
