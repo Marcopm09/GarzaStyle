@@ -282,6 +282,14 @@ export default function ArmarioScreen() {
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
+            <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/RedSocial'), 300); }}>
+              <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/Colorimetria'), 300); }}>
+              <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
+            </TouchableOpacity>
+
             <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/Guardados'), 300); }}>
               <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
             </TouchableOpacity>
