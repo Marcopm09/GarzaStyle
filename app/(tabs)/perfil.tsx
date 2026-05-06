@@ -156,11 +156,11 @@ export default function PerfilScreen() {
                         <TouchableOpacity onPress={() => { setMenuVisible(false); router.push('/Armario'); }}>
                             <Image source={require('@/assets/images/Gancho.png')} style={styles.menuImage} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setMenuVisible(false)}>
-                            <Image source={require('@/assets/images/Camara.png')} style={styles.menuImage} />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setMenuVisible(false)}>
+                        <TouchableOpacity onPress={() => {setMenuVisible(false); router.push('/RedSocial'); }}>
                             <Image source={require('@/assets/images/Camisa.png')} style={styles.menuImage} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => {setMenuVisible(false); router.push('/Colorimetria'); }}>
+                            <Image source={require('@/assets/images/Pantalon.png')} style={styles.menuImage} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => { setMenuVisible(false); router.push('/Guardados'); }}>
                             <Image source={require('@/assets/images/Guardar.png')} style={styles.menuImage} />

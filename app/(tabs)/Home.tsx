@@ -279,7 +279,7 @@ export default function HoraLocalScreen() {
 
     // --- Detectar clima y hora ---
     const climaTexto = (clima || '').toLowerCase();
-    const horaTexto  = (hora  || '').toLowerCase();
+    const horaTexto = (hora || '').toLowerCase();
 
     let horaNum = 12;
     const matchHora = horaTexto.match(/(\d{1,2}):(\d{2})/);
@@ -290,13 +290,13 @@ export default function HoraLocalScreen() {
     }
 
     const esNoche = horaNum >= 19 || horaNum < 6;
-    const esFrio  = climaTexto.includes('frío') || climaTexto.includes('frio') ||
-                    climaTexto.includes('fresco') || climaTexto.includes('lluv') ||
-                    climaTexto.includes('nublado') || climaTexto.includes('viento');
+    const esFrio = climaTexto.includes('frío') || climaTexto.includes('frio') ||
+      climaTexto.includes('fresco') || climaTexto.includes('lluv') ||
+      climaTexto.includes('nublado') || climaTexto.includes('viento');
 
-    const totalCamisas    = imagenesPorSeccion['Camisas / Playeras']?.length || 0;
+    const totalCamisas = imagenesPorSeccion['Camisas / Playeras']?.length || 0;
     const totalPantalones = imagenesPorSeccion['Pantalones / Shorts / Faldas']?.length || 0;
-    const totalZapatos    = imagenesPorSeccion['Tenis / Zapatos']?.length || 0;
+    const totalZapatos = imagenesPorSeccion['Tenis / Zapatos']?.length || 0;
 
     // --- Elegir índice aleatorio evitando repetir el anterior ---
     const aleatorio = (total: number, anterior: number): number => {
@@ -311,9 +311,9 @@ export default function HoraLocalScreen() {
     };
 
     const ultimo = ultimoOutfitRef.current;
-    const indiceCamisa   = aleatorio(totalCamisas,    ultimo?.camisa   ?? -1);
+    const indiceCamisa = aleatorio(totalCamisas, ultimo?.camisa ?? -1);
     const indicePantalon = aleatorio(totalPantalones, ultimo?.pantalon ?? -1);
-    const indiceZapatos  = aleatorio(totalZapatos,    ultimo?.zapatos  ?? -1);
+    const indiceZapatos = aleatorio(totalZapatos, ultimo?.zapatos ?? -1);
 
     // Guardar para la próxima llamada
     ultimoOutfitRef.current = { camisa: indiceCamisa, pantalon: indicePantalon, zapatos: indiceZapatos };
@@ -331,9 +331,9 @@ export default function HoraLocalScreen() {
     const nuevosIndices: { [key: string]: number } = {};
 
     const mapeo = [
-      { seccion: 'Camisas / Playeras',           indice: indiceCamisa   },
+      { seccion: 'Camisas / Playeras', indice: indiceCamisa },
       { seccion: 'Pantalones / Shorts / Faldas', indice: indicePantalon },
-      { seccion: 'Tenis / Zapatos',              indice: indiceZapatos  },
+      { seccion: 'Tenis / Zapatos', indice: indiceZapatos },
     ];
 
     mapeo.forEach(({ seccion, indice }) => {
@@ -352,7 +352,7 @@ export default function HoraLocalScreen() {
 
     // Mensaje según contexto
     let mensaje = '¡Aquí tienes una nueva combinación! ';
-    if (esFrio)  mensaje = 'Hace frío hoy, outfit abrigado sugerido. ';
+    if (esFrio) mensaje = 'Hace frío hoy, outfit abrigado sugerido. ';
     if (esNoche) mensaje = 'Noche perfecta para este outfit. ';
 
     setTimeout(() => {
@@ -593,17 +593,17 @@ export default function HoraLocalScreen() {
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-           <TouchableOpacity 
-  onPress={() => {
-    toggleMenu(); // Cierra el menú antes de navegar
-    setTimeout(() => router.push('/(tabs)/RedSocial'), 300);
-  }}
->
-  <Image 
-    source={require('@/assets/images/Camisa.png')} 
-    style={style.menuImage} 
-  />
-</TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                toggleMenu(); // Cierra el menú antes de navegar
+                setTimeout(() => router.push('/(tabs)/RedSocial'), 300);
+              }}
+            >
+              <Image
+                source={require('@/assets/images/Camisa.png')}
+                style={style.menuImage}
+              />
+            </TouchableOpacity>
 
             <TouchableOpacity onPress={() => router.push('/Colorimetria')}>
               <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
@@ -848,7 +848,7 @@ const style = StyleSheet.create({
   },
   carouselImageSingle: {
     borderRadius: 8,
-    resizeMode: 'cover',
+    resizeMode: 'contain',
     overflow: 'hidden',
   },
   emptyBoxSingle: {

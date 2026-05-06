@@ -1,31 +1,31 @@
+import {
+  addDoc,
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDocs,
+  increment,
+  orderBy,
+  query,
+  updateDoc
+} from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  Image, 
-  TouchableOpacity, 
-  Dimensions, 
+import {
   ActivityIndicator,
   Alert,
-  TextInput,
+  Dimensions,
+  FlatList,
+  Image,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { 
-  collection, 
-  query, 
-  getDocs, 
-  updateDoc, 
-  doc, 
-  arrayUnion, 
-  addDoc, 
-  increment, 
-  orderBy,
-  arrayRemove
-} from 'firebase/firestore';
-import { db, auth } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 
 const { width } = Dimensions.get('window');
 const wp = (p: number) => (width * p) / 100;
@@ -51,50 +51,50 @@ export default function RedSocial() {
   useEffect(() => {
     cargarFeed();
   }, []);
-const darLike = async (id: string, item: any) => {
-  const user = auth.currentUser;
-  if (!user) return;
+  const darLike = async (id: string, item: any) => {
+    const user = auth.currentUser;
+    if (!user) return;
 
-  // Validación: si el campo no existe en el post viejo, lo tratamos como array vacío
-  const listaLikes = item.usuariosQueDieronLike || [];
-  const yaDioLike = listaLikes.includes(user.uid);
+    // Validación: si el campo no existe en el post viejo, lo tratamos como array vacío
+    const listaLikes = item.usuariosQueDieronLike || [];
+    const yaDioLike = listaLikes.includes(user.uid);
 
-  try {
-    const docRef = doc(db, 'Publicaciones', id);
-    await updateDoc(docRef, {
-      likes: yaDioLike ? increment(-1) : increment(1),
-      usuariosQueDieronLike: yaDioLike ? arrayRemove(user.uid) : arrayUnion(user.uid)
-    });
-    cargarFeed();
-  } catch (error) {
-    console.error(error);
-    Alert.alert("Error", "Revisa tus reglas de Firebase o tu conexión.");
-  }
-};
+    try {
+      const docRef = doc(db, 'Publicaciones', id);
+      await updateDoc(docRef, {
+        likes: yaDioLike ? increment(-1) : increment(1),
+        usuariosQueDieronLike: yaDioLike ? arrayRemove(user.uid) : arrayUnion(user.uid)
+      });
+      cargarFeed();
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Revisa tus reglas de Firebase o tu conexión.");
+    }
+  };
 
-const enviarComentario = async (id: string) => {
-  const user = auth.currentUser;
-  const texto = nuevoComentario[id];
-  if (!user || !texto?.trim()) return;
+  const enviarComentario = async (id: string) => {
+    const user = auth.currentUser;
+    const texto = nuevoComentario[id];
+    if (!user || !texto?.trim()) return;
 
-  try {
-    const docRef = doc(db, 'Publicaciones', id);
-    // Usamos updateDoc. Si el post es viejo y no tiene el campo 'comentarios', 
-    // arrayUnion lo creará automáticamente si las reglas lo permiten.
-    await updateDoc(docRef, {
-      comentarios: arrayUnion({
-        usuario: user.displayName || "☆",
-        texto: texto.trim(),
-        fecha: new Date().toISOString()
-      })
-    });
-    setNuevoComentario({ ...nuevoComentario, [id]: "" });
-    cargarFeed();
-  } catch (error) {
-    console.error(error);
-    Alert.alert("Error", "No se pudo publicar el comentario.");
-  }
-};
+    try {
+      const docRef = doc(db, 'Publicaciones', id);
+      // Usamos updateDoc. Si el post es viejo y no tiene el campo 'comentarios', 
+      // arrayUnion lo creará automáticamente si las reglas lo permiten.
+      await updateDoc(docRef, {
+        comentarios: arrayUnion({
+          usuario: user.displayName || "☆",
+          texto: texto.trim(),
+          fecha: new Date().toISOString()
+        })
+      });
+      setNuevoComentario({ ...nuevoComentario, [id]: "" });
+      cargarFeed();
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "No se pudo publicar el comentario.");
+    }
+  };
   const guardarEnMiArmario = async (prendas: any) => {
     try {
       await addDoc(collection(db, 'Conjuntos'), {
@@ -118,8 +118,8 @@ const enviarComentario = async (id: string) => {
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <View style={styles.headerContainer}>
@@ -136,7 +136,7 @@ const enviarComentario = async (id: string) => {
           return (
             <View style={styles.postCard}>
               <Text style={styles.userName}>@{item.nombreUsuario || 'Usuario'}</Text>
-              
+
               {/* Muestra TODAS las prendas */}
               <View style={styles.outfitGrid}>
                 {item.prendas?.accesorios && (
@@ -166,26 +166,26 @@ const enviarComentario = async (id: string) => {
               </View>
 
               <View style={styles.footerCard}>
-                <TouchableOpacity 
-  onPress={() => darLike(item.id, yaDioLike)} 
-  style={[
-    styles.likeButtonContainer, 
-    yaDioLike ? styles.likeActiveBackground : styles.likeInactiveBorder
-  ]}
->
-  <View style={styles.iconWrapper}>
-    <Text style={styles.heartIcon}>❤️</Text>
-    <Text style={[
-      styles.likeCount, 
-      yaDioLike ? styles.textWhite : styles.textBlack
-    ]}>
-      {item.likes || 0}
-    </Text>
-  </View>
-</TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => darLike(item.id, yaDioLike)}
+                  style={[
+                    styles.likeButtonContainer,
+                    yaDioLike ? styles.likeActiveBackground : styles.likeInactiveBorder
+                  ]}
+                >
+                  <View style={styles.iconWrapper}>
+                    <Text style={styles.heartIcon}>❤️</Text>
+                    <Text style={[
+                      styles.likeCount,
+                      yaDioLike ? styles.textWhite : styles.textBlack
+                    ]}>
+                      {item.likes || 0}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
 
-                <TouchableOpacity 
-                  onPress={() => guardarEnMiArmario(item.prendas)} 
+                <TouchableOpacity
+                  onPress={() => guardarEnMiArmario(item.prendas)}
                   style={styles.blackAction}
                 >
                   <Text style={styles.actionTextWhite}>GUARDAR LOOK</Text>
@@ -199,7 +199,7 @@ const enviarComentario = async (id: string) => {
                     <Text style={{ fontWeight: 'bold' }}>{c.usuario}: </Text>{c.texto}
                   </Text>
                 ))}
-                
+
                 <View style={styles.inputContainer}>
                   <TextInput
                     placeholder="Añadir comentario..."
@@ -226,14 +226,14 @@ const styles = StyleSheet.create({
   headerContainer: { marginTop: 50, marginBottom: 10, alignItems: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: 2 },
   headerSubtitle: { color: '#D4AF37', fontSize: 14, fontWeight: 'bold', marginTop: -5 },
-  postCard: { 
-    backgroundColor: '#FFFFFF', 
-    marginHorizontal: 15, 
-    marginBottom: 25, 
-    borderRadius: 20, 
+  postCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 15,
+    marginBottom: 25,
+    borderRadius: 20,
     padding: 15,
     borderLeftWidth: 6,
-    borderColor: '#D4AF37' 
+    borderColor: '#D4AF37'
   },
   userName: { color: '#000', fontWeight: '800', fontSize: 16, marginBottom: 15 },
   outfitGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
