@@ -2,9 +2,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
   Modal,
@@ -22,19 +23,20 @@ import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
 const { width, height } = Dimensions.get('window');
+const screenWidth = Dimensions.get('window').width;
 
-// Funciones responsivas
 const wp = (percentage: number) => (width * percentage) / 100;
 const hp = (percentage: number) => (height * percentage) / 100;
 
-// Detección de tamaño de dispositivo
 const isSmallDevice = width < 360;
 const isMediumDevice = width >= 360 && width < 400;
 const isTablet = width >= 768;
 
-export default function HoraLocalScreen() {
+export default function ArmarioScreen() {
   const hora = useHora();
   const clima = useClima();
+
+  const translateX = useRef(new Animated.Value(screenWidth)).current;
   const [menuVisible, setMenuVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [seccionSeleccionada, setSeccionSeleccionada] = useState<string>('');
@@ -51,19 +53,17 @@ export default function HoraLocalScreen() {
     'Pantalones / Shorts / Faldas': [],
     'Tenis / Zapatos': [],
   });
-
   const [usuarioID, setUsuarioID] = useState<string>('');
-
   const [mensajeVisible, setMensajeVisible] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
+  // ── Obtener UID del usuario ──
   useEffect(() => {
     const user = auth.currentUser;
-    if (user) {
-      setUsuarioID(user.uid);
-    }
+    if (user) setUsuarioID(user.uid);
   }, []);
 
+  // ── Cargar imágenes desde Firestore ──
   useEffect(() => {
     if (!usuarioID) return;
     const cargarImagenes = async () => {
@@ -75,7 +75,6 @@ export default function HoraLocalScreen() {
           'Tenis / Zapatos',
         ];
         const nuevasImagenes: { [key: string]: any[] } = {};
-
         for (const seccion of secciones) {
           const q = query(
             collection(db, 'Prendas'),
@@ -88,79 +87,77 @@ export default function HoraLocalScreen() {
             docId: doc.id,
           }));
         }
-
         setImagenesPorSeccion(nuevasImagenes);
       } catch (error) {
         console.error('❌ Error cargando imágenes:', error);
       }
     };
-
     cargarImagenes();
   }, [usuarioID]);
 
+  // ── Menú ──
   const toggleMenu = () => {
-    setMenuVisible(!menuVisible);
+    if (menuVisible) {
+      Animated.timing(translateX, {
+        toValue: screenWidth,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setTimeout(() => setMenuVisible(false), 10));
+    } else {
+      setMenuVisible(true);
+      Animated.timing(translateX, {
+        toValue: screenWidth * 0.4,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
   };
 
+  // ── Mensaje flotante ──
   const mostrarMensaje = (texto: string) => {
     setMensaje(texto);
     setMensajeVisible(true);
-    setTimeout(() => {
-      setMensajeVisible(false);
-    }, 2000);
+    setTimeout(() => setMensajeVisible(false), 2000);
   };
 
+  // ── Eliminar imagen ──
   const eliminarImagen = async () => {
     if (!imagenSeleccionada) return;
-
-    Alert.alert(
-      '¿Eliminar imagen?',
-      'Esta acción no se puede deshacer',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            const imagenAEliminar = imagenSeleccionada;
-            setImagenSeleccionada(null);
-
-            try {
-              if (imagenAEliminar.docId) {
-                await deleteDoc(doc(db, 'Prendas', imagenAEliminar.docId));
-              }
-
-              const imageRef = ref(storage, imagenAEliminar.uri);
-              await deleteObject(imageRef);
-
-              setImagenesPorSeccion((prev) => ({
-                ...prev,
-                [imagenAEliminar.seccion]: prev[imagenAEliminar.seccion].filter(
-                  (img) => img.uri !== imagenAEliminar.uri
-                ),
-              }));
-
-              mostrarMensaje('✅ Imagen eliminada');
-            } catch (error) {
-              console.error('❌ Error eliminando imagen:', error);
-              mostrarMensaje('❌ Error al eliminar');
+    Alert.alert('¿Eliminar imagen?', 'Esta acción no se puede deshacer', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          const imagenAEliminar = imagenSeleccionada;
+          setImagenSeleccionada(null);
+          try {
+            if (imagenAEliminar.docId) {
+              await deleteDoc(doc(db, 'Prendas', imagenAEliminar.docId));
             }
-          },
+            const imageRef = ref(storage, imagenAEliminar.uri);
+            await deleteObject(imageRef);
+            setImagenesPorSeccion((prev) => ({
+              ...prev,
+              [imagenAEliminar.seccion]: prev[imagenAEliminar.seccion].filter(
+                (img) => img.uri !== imagenAEliminar.uri
+              ),
+            }));
+            mostrarMensaje('✅ Imagen eliminada');
+          } catch (error) {
+            console.error('❌ Error eliminando imagen:', error);
+            mostrarMensaje('❌ Error al eliminar');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const subirImagen = async (usuarioID: string, seccion: string) => {
+  // ── Subir imagen desde galería ──
+  const subirImagen = async (uid: string, seccion: string) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        mostrarMensaje('Permiso denegado');
-        return;
-      }
+      if (status !== 'granted') { mostrarMensaje('Permiso denegado'); return; }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -168,23 +165,19 @@ export default function HoraLocalScreen() {
         aspect: [1, 1],
         quality: 0.8,
       });
-
       if (result.canceled) return;
-      const asset = result.assets[0];
-      const uri = asset.uri;
 
+      const uri = result.assets[0].uri;
       const response = await fetch(uri);
       const blob = await response.blob();
-
       const timestamp = Date.now();
-      const storagePath = `prendas/${usuarioID}/${timestamp}.jpg`;
+      const storagePath = `prendas/${uid}/${timestamp}.jpg`;
       const storageRefPath = ref(storage, storagePath);
-
       await uploadBytesResumable(storageRefPath, blob);
       const downloadURL = await getDownloadURL(storageRefPath);
 
       const docRef = await addDoc(collection(db, 'Prendas'), {
-        usuarioID,
+        usuarioID: uid,
         nombre: 'Nombre temporal',
         talla: 'M',
         fotoURL: downloadURL,
@@ -198,7 +191,6 @@ export default function HoraLocalScreen() {
         ...prev,
         [seccion]: [...prev[seccion], { uri: downloadURL, docId: docRef.id }],
       }));
-
       mostrarMensaje('✅ Imagen subida');
     } catch (error) {
       console.error('❌ Error subiendo imagen:', error);
@@ -206,36 +198,30 @@ export default function HoraLocalScreen() {
     }
   };
 
-  const tomarFoto = async (usuarioID: string, seccion: string) => {
+  // ── Tomar foto con cámara ──
+  const tomarFoto = async (uid: string, seccion: string) => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        mostrarMensaje('Permiso denegado');
-        return;
-      }
+      if (status !== 'granted') { mostrarMensaje('Permiso denegado'); return; }
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
       if (result.canceled) return;
-      const asset = result.assets[0];
-      const uri = asset.uri;
 
+      const uri = result.assets[0].uri;
       const response = await fetch(uri);
       const blob = await response.blob();
-
       const timestamp = Date.now();
-      const storagePath = `prendas/${usuarioID}/${timestamp}.jpg`;
+      const storagePath = `prendas/${uid}/${timestamp}.jpg`;
       const storageRefPath = ref(storage, storagePath);
-
       await uploadBytesResumable(storageRefPath, blob);
       const downloadURL = await getDownloadURL(storageRefPath);
 
       const docRef = await addDoc(collection(db, 'Prendas'), {
-        usuarioID,
+        usuarioID: uid,
         nombre: 'Nombre temporal',
         talla: 'M',
         fotoURL: downloadURL,
@@ -249,7 +235,6 @@ export default function HoraLocalScreen() {
         ...prev,
         [seccion]: [...prev[seccion], { uri: downloadURL, docId: docRef.id }],
       }));
-
       mostrarMensaje('✅ Foto guardada');
     } catch (error) {
       console.error('❌ Error tomando foto:', error);
@@ -261,42 +246,58 @@ export default function HoraLocalScreen() {
     <View style={style.container}>
       <StatusBar hidden={true} />
 
+      {/* ── HEADER ── */}
+      <Image source={require('@/assets/images/Logo_GarzaStyle.png')} style={style.GarzaLogo} />
+      <Text style={style.horaTexto}>{hora}</Text>
+      <Text style={style.climaTexto}>{clima}</Text>
+      <Text style={style.subtitle}>Tu armario digital!!</Text>
+
+      {/* ── BOTÓN MENÚ ── */}
       <TouchableOpacity style={style.menuButton} onPress={toggleMenu}>
         <Text style={style.menuIcon}>☰</Text>
       </TouchableOpacity>
 
+      {/* ── MENÚ DESLIZABLE ── */}
       {menuVisible && (
-        <>
-          <Pressable style={style.overlay} onPress={toggleMenu} />
-          <View style={style.menu}>
-            <TouchableOpacity onPress={() => router.push('/Home')}>
+        <Pressable style={style.overlay} onPress={toggleMenu}>
+          <Animated.View
+            style={[
+              style.menu,
+              {
+                transform: [{
+                  translateX: translateX.interpolate({
+                    inputRange: [screenWidth * 0.4, screenWidth],
+                    outputRange: [0, screenWidth * 0.6],
+                  }),
+                }],
+              },
+            ]}
+            onStartShouldSetResponder={() => true}
+          >
+            <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/Home'), 300); }}>
               <Image source={require('@/assets/images/House.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push('/(tabs)/perfil')}>
+            <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/perfil'), 300); }}>
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push('/(tabs)/perfil')}>
+            <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/RedSocial'), 300); }}>
               <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/Colorimetria'), 300); }}>
               <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.push('/Guardados')}>
+            <TouchableOpacity onPress={() => { toggleMenu(); setTimeout(() => router.push('/(tabs)/Guardados'), 300); }}>
               <Image source={require('@/assets/images/Guardar.png')} style={style.menuImage} />
             </TouchableOpacity>
-          </View>
-        </>
+          </Animated.View>
+        </Pressable>
       )}
 
-      <Text style={style.horaTexto}>{hora}</Text>
-      <Text style={style.climaTexto}>{clima}</Text>
-      <Text style={style.subtitle}>Tu armario digital!!</Text>
-      <Image source={require('@/assets/images/Logo_GarzaStyle.png')} style={style.GarzaLogo} />
-
+      {/* ── SCROLL DE SECCIONES ── */}
       <ScrollView
         style={style.scrollContainer}
         contentContainerStyle={{ paddingBottom: hp(10) }}
@@ -330,18 +331,9 @@ export default function HoraLocalScreen() {
             </View>
           )
         )}
-
-        <TouchableOpacity
-          style={style.bottomButton}
-          onPress={() => mostrarMensaje('Próximamente...')}
-        >
-          <Image
-            source={require('@/assets/images/bolsa.png')}
-            style={style.bottomButtonImage}
-          />
-        </TouchableOpacity>
       </ScrollView>
 
+      {/* ── MODAL GALERÍA / CÁMARA ── */}
       <Modal transparent visible={modalVisible} animationType="fade">
         <Pressable style={style.modalOverlay} onPress={() => setModalVisible(false)}>
           <View style={style.modalContent}>
@@ -354,7 +346,6 @@ export default function HoraLocalScreen() {
             >
               <Text style={style.textoModalButton}>Galería</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={style.modalButton}
               onPress={() => {
@@ -368,6 +359,7 @@ export default function HoraLocalScreen() {
         </Pressable>
       </Modal>
 
+      {/* ── MODAL IMAGEN GRANDE ── */}
       <Modal
         visible={imagenSeleccionada !== null}
         transparent
@@ -375,11 +367,7 @@ export default function HoraLocalScreen() {
         onRequestClose={() => setImagenSeleccionada(null)}
       >
         <View style={style.modalImagenCompleta}>
-          <Pressable
-            style={style.modalImagenFondo}
-            onPress={() => setImagenSeleccionada(null)}
-          />
-
+          <Pressable style={style.modalImagenFondo} onPress={() => setImagenSeleccionada(null)} />
           <View style={style.contenedorImagenGrande}>
             <Image
               source={{ uri: imagenSeleccionada?.uri }}
@@ -387,25 +375,18 @@ export default function HoraLocalScreen() {
               resizeMode="contain"
             />
           </View>
-
           <View style={style.botonesImagen}>
-            <TouchableOpacity
-              style={[style.botonAccion, style.botonEliminar]}
-              onPress={eliminarImagen}
-            >
+            <TouchableOpacity style={[style.botonAccion, style.botonEliminar]} onPress={eliminarImagen}>
               <Text style={style.textoBoton}>🗑️ Eliminar</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[style.botonAccion, style.botonCerrar]}
-              onPress={() => setImagenSeleccionada(null)}
-            >
+            <TouchableOpacity style={[style.botonAccion, style.botonCerrar]} onPress={() => setImagenSeleccionada(null)}>
               <Text style={style.textoBoton}>✕ Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
+      {/* ── MENSAJE FLOTANTE ── */}
       {mensajeVisible && (
         <View style={style.mensajeContainer}>
           <Text style={style.mensajeTexto}>{mensaje}</Text>
@@ -446,6 +427,14 @@ const style = StyleSheet.create({
     color: '#ffffff',
     position: 'absolute',
     top: Platform.OS === 'ios' ? hp(3) : hp(2),
+    right: wp(8),
+  },
+  climaTexto: {
+    fontSize: isSmallDevice ? wp(3) : isTablet ? wp(2.5) : wp(4),
+    fontWeight: '600',
+    color: '#ffffff',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? hp(6) : hp(5),
     right: wp(8),
   },
   menuButton: {
@@ -491,7 +480,7 @@ const style = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     width: '100%',
-    marginTop: isTablet ? hp(22) : hp(24),
+    marginTop: isTablet ? hp(22) : hp(28),
     paddingHorizontal: wp(3),
   },
   section: {
@@ -521,7 +510,7 @@ const style = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: isTablet ? wp(3) : wp(5),
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   modalOverlay: {
     flex: 1,
@@ -547,24 +536,6 @@ const style = StyleSheet.create({
     color: 'white',
     fontSize: isSmallDevice ? wp(4) : isTablet ? wp(3) : wp(4.5),
     fontWeight: '600',
-  },
-  bottomButton: {
-    alignSelf: 'center',
-    backgroundColor: '#000000',
-    padding: wp(3),
-    borderRadius: 100,
-    marginTop: hp(4),
-    marginBottom: hp(10),
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  bottomButtonImage: {
-    width: isTablet ? wp(20) : wp(30),
-    height: isTablet ? wp(10) : wp(15),
-    resizeMode: 'contain',
   },
   modalImagenCompleta: {
     flex: 1,
@@ -628,13 +599,5 @@ const style = StyleSheet.create({
     color: 'white',
     fontSize: isSmallDevice ? wp(3.5) : isTablet ? wp(2.5) : wp(4),
     textAlign: 'center',
-  },
-  climaTexto: {
-    fontSize: isSmallDevice ? 11 : isMediumDevice ? 13 : isTablet ? 17 : 15,
-    fontWeight: '600',
-    color: 'rgb(255, 255, 255)',
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? hp(10) : hp(8),  // ligeramente abajo de la hora
-    right: wp(5),
   },
 });
