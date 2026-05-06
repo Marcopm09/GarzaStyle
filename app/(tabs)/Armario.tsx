@@ -21,13 +21,23 @@ import { auth, db, storage } from '../../firebaseConfig';
 import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
+// ✨ Importar librería con try/catch a nivel de módulo
+let removeBackground: any = null;
+let isNativeBackgroundRemovalSupported: any = null;
+
+try {
+  const bgRemoval = require('@six33/react-native-bg-removal');
+  removeBackground = bgRemoval.removeBackground;
+  isNativeBackgroundRemovalSupported = bgRemoval.isNativeBackgroundRemovalSupported;
+} catch (e) {
+  console.warn('BG removal module no disponible (Expo Go)');
+}
+
 const { width, height } = Dimensions.get('window');
 
-// Funciones responsivas
 const wp = (percentage: number) => (width * percentage) / 100;
 const hp = (percentage: number) => (height * percentage) / 100;
 
-// Detección de tamaño de dispositivo
 const isSmallDevice = width < 360;
 const isMediumDevice = width >= 360 && width < 400;
 const isTablet = width >= 768;
@@ -53,7 +63,6 @@ export default function HoraLocalScreen() {
   });
 
   const [usuarioID, setUsuarioID] = useState<string>('');
-
   const [mensajeVisible, setMensajeVisible] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
@@ -109,6 +118,31 @@ export default function HoraLocalScreen() {
       setMensajeVisible(false);
     }, 2000);
   };
+
+const intentarRemoverFondo = async (uri: string): Promise<string> => {
+  try {
+    if (removeBackground && isNativeBackgroundRemovalSupported) {
+      const isSupported = await isNativeBackgroundRemovalSupported();
+      if (isSupported) {
+        mostrarMensaje('✂️ Removiendo fondo...');
+        const resultado = await removeBackground(uri, { trim: true });
+        mostrarMensaje('✅ Fondo removido');
+        // ✨ Asegura que la URI tenga el formato correcto para fetch en Android
+        if (resultado && resultado.length > 0) {
+          return resultado.startsWith('file://') ? resultado : `file://${resultado}`;
+        }
+      }
+    }
+  } catch (bgError: any) {
+    if (bgError.message?.includes('Waiting for')) {
+      mostrarMensaje('⏳ Descargando modelo IA, intenta en un momento...');
+    } else {
+      mostrarMensaje('⚠️ Subiendo sin remoción de fondo...');
+    }
+    console.warn('BG removal:', bgError.message);
+  }
+  return uri;
+};
 
   const eliminarImagen = async () => {
     if (!imagenSeleccionada) return;
@@ -171,7 +205,9 @@ export default function HoraLocalScreen() {
 
       if (result.canceled) return;
       const asset = result.assets[0];
-      const uri = asset.uri;
+
+      // ✨ Intentar remover fondo, si falla usa la imagen original
+      let uri = await intentarRemoverFondo(asset.uri);
 
       const response = await fetch(uri);
       const blob = await response.blob();
@@ -222,7 +258,9 @@ export default function HoraLocalScreen() {
 
       if (result.canceled) return;
       const asset = result.assets[0];
-      const uri = asset.uri;
+
+      // ✨ Intentar remover fondo, si falla usa la imagen original
+      let uri = await intentarRemoverFondo(asset.uri);
 
       const response = await fetch(uri);
       const blob = await response.blob();
@@ -634,7 +672,7 @@ const style = StyleSheet.create({
     fontWeight: '600',
     color: 'rgb(255, 255, 255)',
     position: 'absolute',
-    top: Platform.OS === 'ios' ? hp(10) : hp(8),  // ligeramente abajo de la hora
+    top: Platform.OS === 'ios' ? hp(10) : hp(8),
     right: wp(5),
   },
 });
