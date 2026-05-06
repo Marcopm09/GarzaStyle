@@ -1,9 +1,16 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
+<<<<<<< HEAD
 // 1. Crear el contexto prueba gris
 const HoraContext = createContext('');
 
 // 2. Definir props del proveedor Cambio Prueba otto 
+=======
+// 1. Crear el contexto
+const HoraContext = createContext('');
+
+// 2. Definir props del proveedor
+>>>>>>> MarcoG
 type HoraProviderProps = {
   children: ReactNode;
 };
