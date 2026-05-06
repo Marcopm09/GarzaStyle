@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, addDoc, query, updateDoc, where } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -14,9 +14,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  
 } from 'react-native';
-import { auth, db } from '../../firebaseConfig';
+import { auth, db,  } from '../../firebaseConfig';
 import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
@@ -167,9 +168,29 @@ export default function GuardadosScreen() {
     );
   };
 
-  const compartirConjunto = (id: string) => {
-    Alert.alert('Compartir', 'Funcionalidad de compartir próximamente');
-  };
+  const compartirConjunto = async (conjunto: Conjunto) => {
+  try {
+    // Extraemos prendas y nombre, ignoramos el id antiguo de "Conjuntos"
+    const { prendas, nombre } = conjunto; 
+
+    const publicacion = {
+      prendas: prendas,
+      nombreOriginal: nombre || "Outfit",
+      usuarioID: auth.currentUser?.uid,
+      nombreUsuario: nombreUsuario || "☆", // Asegúrate que esta variable tenga valor
+      likes: 0,
+      comentarios: [],
+      usuariosQueDieronLike: [],
+      fechaPublicacion: new Date(),
+    };
+    
+    await addDoc(collection(db, 'Publicaciones'), publicacion);
+    Alert.alert('¡Éxito!', 'Publicado en la comunidad GarzaStyle ✨');
+  } catch (error) {
+    console.error(error);
+    Alert.alert('Error', 'No se pudo compartir');
+  }
+};
 
   const obtenerAccesorios = (accesoriosString: string | null): string[] => {
     if (!accesoriosString) return [];
@@ -241,19 +262,21 @@ export default function GuardadosScreen() {
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
-              <Image
-                source={require('@/assets/images/Camisa.png')}
-                style={style.menuImage}
+            <TouchableOpacity 
+              onPress={() => {
+                toggleMenu(); // Cierra el menú antes de navegar
+                setTimeout(() => router.push('/(tabs)/RedSocial'), 300);
+              }}
+            >
+              <Image 
+                source={require('@/assets/images/Camisa.png')} 
+                style={style.menuImage} 
               />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
-              <Image
-                source={require('@/assets/images/Pantalon.png')}
-                style={style.menuImage}
-              />
-            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/Colorimetria')}>
+                          <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
+                        </TouchableOpacity>
           </Animated.View>
         </Pressable>
       )}
@@ -416,18 +439,16 @@ export default function GuardadosScreen() {
                       source={require('@/assets/images/Borrar.png')}
                       style={style.deleteButton}
                     />
-                  </TouchableOpacity>
-
-                  {/* Botón compartir */}
-                  <TouchableOpacity
-                    style={style.shareButtonContainer}
-                    onPress={() => compartirConjunto(item.id)}
-                  >
-                    <Image
-                      source={require('@/assets/images/compa.png')}
-                      style={style.shareButton}
-                    />
-                  </TouchableOpacity>
+                  </TouchableOpacity>     
+<TouchableOpacity
+  style={style.shareButtonContainer}
+  onPress={() => compartirConjunto(item)}
+>
+  <Image
+    source={require('@/assets/images/compa.png')}
+    style={style.shareButton}
+  />
+</TouchableOpacity>
 
                 </View>
               );

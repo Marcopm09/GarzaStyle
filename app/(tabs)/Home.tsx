@@ -593,9 +593,17 @@ export default function HoraLocalScreen() {
               <Image source={require('@/assets/images/Camara.png')} style={style.menuImage} />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log('aun no')}>
-              <Image source={require('@/assets/images/Camisa.png')} style={style.menuImage} />
-            </TouchableOpacity>
+           <TouchableOpacity 
+  onPress={() => {
+    toggleMenu(); // Cierra el menú antes de navegar
+    setTimeout(() => router.push('/(tabs)/RedSocial'), 300);
+  }}
+>
+  <Image 
+    source={require('@/assets/images/Camisa.png')} 
+    style={style.menuImage} 
+  />
+</TouchableOpacity>
 
             <TouchableOpacity onPress={() => router.push('/Colorimetria')}>
               <Image source={require('@/assets/images/Pantalon.png')} style={style.menuImage} />
