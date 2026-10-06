@@ -53,7 +53,8 @@
           "photosPermission": "GarzaStyle necesita acceso a tus fotos para que puedas subir imágenes de tus prendas.",
           "cameraPermission": "GarzaStyle necesita acceso a tu cámara para que puedas tomar fotos de tus prendas."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
