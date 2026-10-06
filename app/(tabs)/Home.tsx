@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { auth } from '../../firebaseConfig';
 
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
   FlatList,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -19,6 +21,7 @@ import {
   View
 } from 'react-native';
 import { db } from '../../firebaseConfig';
+import { sugerirOutfitConIA as servicioGeminiOutfit } from '../../Service/geminiOutfit';
 import { useClima } from '../Clima';
 import { useHora } from '../Hora';
 
@@ -50,6 +53,12 @@ export default function HoraLocalScreen() {
   });
   const [usuarioID, setUsuarioID] = useState<string>('');
   const [cargandoSugerencia, setCargandoSugerencia] = useState(false);
+  const [cargandoIA, setCargandoIA] = useState(false);
+  const [modalIAVisible, setModalIAVisible] = useState(false);
+  const [detalleOutfitIA, setDetalleOutfitIA] = useState<{
+    nombre: string;
+    explicacion: string;
+  } | null>(null);
 
   // Referencias para los FlatList
   const flatListRefs = useRef<{ [key: string]: FlatList<any> | null }>({});
@@ -361,6 +370,104 @@ export default function HoraLocalScreen() {
     }, 600); // pequeña pausa para que se vea la animación de scroll
   };
 
+  const sugerirOutfitIA = async () => {
+    if (cargandoIA) return;
+
+    const sinPrendas = secciones.every(
+      s => !imagenesPorSeccion[s] || imagenesPorSeccion[s].length === 0
+    );
+    if (sinPrendas) {
+      Alert.alert('Sin prendas', 'Agrega prendas a tu armario primero');
+      return;
+    }
+
+    setCargandoIA(true);
+
+    try {
+      // 1. Contexto actual de clima
+      const infoClima = typeof clima === 'string'
+        ? { temp: clima.replace('°C', '').trim(), condicion: clima }
+        : clima;
+
+      // 2. Preparar el inventario para el servicio Gemini
+      const prendasParaIA = {
+        'Camisas / Playeras': (imagenesPorSeccion['Camisas / Playeras'] || []).map((uri, index) => ({ uri, docId: `${index}` })),
+        'Pantalones / Shorts / Faldas': (imagenesPorSeccion['Pantalones / Shorts / Faldas'] || []).map((uri, index) => ({ uri, docId: `${index}` })),
+        'Tenis / Zapatos': (imagenesPorSeccion['Tenis / Zapatos'] || []).map((uri, index) => ({ uri, docId: `${index}` })),
+        'Accesorios': (imagenesAccesorios || []).map((uri, index) => ({ uri, docId: `${index}` })),
+      };
+
+      // 3. Consultar servicio de IA
+      const resultado = await servicioGeminiOutfit(infoClima, hora || '', prendasParaIA);
+
+      if (!resultado) {
+        throw new Error('La IA de Gemini no devolvió una respuesta válida');
+      }
+
+      const totalCamisas = imagenesPorSeccion['Camisas / Playeras']?.length || 0;
+      const totalPantalones = imagenesPorSeccion['Pantalones / Shorts / Faldas']?.length || 0;
+      const totalZapatos = imagenesPorSeccion['Tenis / Zapatos']?.length || 0;
+
+      // 4. Validar índices recibidos
+      const idxCamisaValido = typeof resultado.indiceCamisa === 'number' && resultado.indiceCamisa >= 0 && resultado.indiceCamisa < totalCamisas;
+      const idxPantalonValido = typeof resultado.indicePantalon === 'number' && resultado.indicePantalon >= 0 && resultado.indicePantalon < totalPantalones;
+      const idxZapatosValido = typeof resultado.indiceZapatos === 'number' && resultado.indiceZapatos >= 0 && resultado.indiceZapatos < totalZapatos;
+
+      if (!idxCamisaValido || !idxPantalonValido || !idxZapatosValido) {
+        throw new Error(`Índices devueltos por la IA fuera de rango (camisa: ${resultado.indiceCamisa}, pantalón: ${resultado.indicePantalon}, zapatos: ${resultado.indiceZapatos})`);
+      }
+
+      const idxCamisa = resultado.indiceCamisa;
+      const idxPantalon = resultado.indicePantalon;
+      const idxZapatos = resultado.indiceZapatos;
+
+      // Guardar para evitar repeticiones consecutivas
+      ultimoOutfitRef.current = { camisa: idxCamisa, pantalon: idxPantalon, zapatos: idxZapatos };
+
+      // 5. Animar FlatLists al índice seleccionado
+      const mapeo = [
+        { seccion: 'Camisas / Playeras',           indice: idxCamisa   },
+        { seccion: 'Pantalones / Shorts / Faldas', indice: idxPantalon },
+        { seccion: 'Tenis / Zapatos',              indice: idxZapatos  },
+      ];
+
+      const nuevosIndices: { [key: string]: number } = {};
+      mapeo.forEach(({ seccion, indice }) => {
+        nuevosIndices[seccion] = indice;
+        flatListRefs.current[seccion]?.scrollToIndex({ index: indice, animated: true });
+      });
+
+      setIndicesVisibles(prev => ({ ...prev, ...nuevosIndices }));
+
+      // 6. Seleccionar accesorio sugerido si existe
+      if (
+        typeof resultado.indiceAccesorios === 'number' &&
+        resultado.indiceAccesorios >= 0 &&
+        resultado.indiceAccesorios < imagenesAccesorios.length
+      ) {
+        setAccesoriosSeleccionados([imagenesAccesorios[resultado.indiceAccesorios]]);
+      }
+
+      // 7. Mostrar modal con la explicación y estilo
+      setDetalleOutfitIA({
+        nombre: resultado.nombreOutfit || 'Outfit Recomendado con IA',
+        explicacion: resultado.explicacion || 'Recomendación personalizada basada en tu estilo, clima y momento del día.',
+      });
+      setModalIAVisible(true);
+
+    } catch (error) {
+      console.log('⚠️ Error al generar outfit con IA (ejecutando fallback aleatorio):', error);
+      // Fallback: ejecuta el algoritmo heurístico / aleatorio existente
+      sugerirOutfit();
+      Alert.alert(
+        'Modo Alternativo',
+        'No pudimos conectar con la IA en este momento. Se generó una sugerencia alternativa con el algoritmo local.'
+      );
+    } finally {
+      setCargandoIA(false);
+    }
+  };
+
   return (
     <View style={style.container}>
       <StatusBar hidden={true} />
@@ -626,10 +733,62 @@ export default function HoraLocalScreen() {
           <Image source={require('@/assets/images/corazon.png')} style={style.menuImageRedes} />
         </TouchableOpacity>
 
-        <TouchableOpacity activeOpacity={0.7}>
-          <Image source={require('@/assets/images/enviar.png')} style={style.menuImageRedes} />
+        {/* Botón enviar → Sugerir outfit con Inteligencia Artificial (Gemini) */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={sugerirOutfitIA}
+          disabled={cargandoIA}
+        >
+          {cargandoIA ? (
+            <View style={[style.menuImageRedes, style.cargandoIABox]}>
+              <ActivityIndicator size="small" color="#D4AF37" />
+            </View>
+          ) : (
+            <Image
+              source={require('@/assets/images/enviar.png')}
+              style={[style.menuImageRedes, cargandoIA && { opacity: 0.4 }]}
+            />
+          )}
         </TouchableOpacity>
       </View>
+
+      {/* Modal con explicación del Outfit sugerido por IA */}
+      <Modal
+        visible={modalIAVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalIAVisible(false)}
+      >
+        <View style={style.modalIAOverlay}>
+          <View style={style.modalIAContainer}>
+            <View style={style.modalIAHeader}>
+              <View style={style.modalIABadge}>
+                <Text style={style.modalIABadgeText}>✨ GarzaStyle IA</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setModalIAVisible(false)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Text style={style.modalIACerrar}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={style.modalIATitulo}>{detalleOutfitIA?.nombre}</Text>
+
+            <ScrollView style={style.modalIAScroll} showsVerticalScrollIndicator={false}>
+              <Text style={style.modalIADescripcion}>{detalleOutfitIA?.explicacion}</Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={style.modalIABoton}
+              activeOpacity={0.8}
+              onPress={() => setModalIAVisible(false)}
+            >
+              <Text style={style.modalIABotonTexto}>¡Excelente!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -940,5 +1099,80 @@ const style = StyleSheet.create({
     position: 'absolute',
     top: Platform.OS === 'ios' ? hp(9) : hp(8),
     right: wp(5),
+  },
+  cargandoIABox: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalIAOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: wp(5),
+  },
+  modalIAContainer: {
+    width: '90%',
+    maxWidth: 400,
+    backgroundColor: '#ffffff',
+    borderRadius: wp(4.5),
+    padding: wp(5),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  modalIAHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(1.5),
+  },
+  modalIABadge: {
+    backgroundColor: '#FAF5E4',
+    paddingVertical: hp(0.5),
+    paddingHorizontal: wp(3),
+    borderRadius: wp(3),
+    borderWidth: 1,
+    borderColor: '#E8D595',
+  },
+  modalIABadgeText: {
+    fontSize: wp(3.2),
+    fontWeight: '700',
+    color: '#8c7320',
+  },
+  modalIACerrar: {
+    fontSize: wp(4.5),
+    color: '#888888',
+    fontWeight: '600',
+    padding: wp(1),
+  },
+  modalIATitulo: {
+    fontSize: isSmallDevice ? wp(4.5) : wp(4.8),
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: hp(1.2),
+  },
+  modalIAScroll: {
+    maxHeight: hp(25),
+    marginBottom: hp(2),
+  },
+  modalIADescripcion: {
+    fontSize: isSmallDevice ? wp(3.4) : wp(3.7),
+    color: '#444444',
+    lineHeight: wp(5.5),
+  },
+  modalIABoton: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: wp(3),
+    paddingVertical: hp(1.5),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalIABotonTexto: {
+    color: '#ffffff',
+    fontSize: wp(3.8),
+    fontWeight: '700',
   },
 });
